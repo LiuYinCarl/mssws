@@ -1,7 +1,7 @@
 # mssws
 most simple static web server
 
-非常简单易用的静态 web 服务器
+非常简单易用的静态 web 服务器，使用该工具，可以在 5 分钟内搭建出一个博客站点，不用对 Markdown 文件做任何修改即可实现不错的渲染效果
 
 
 
