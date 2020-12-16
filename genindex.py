@@ -28,7 +28,10 @@ head = '''
 <title>Page Title</title>
 </head>
 <body>
-
+<div>
+github: <a href="https://github.com/LiuYinCarl/mssws">mssws</a>
+</div>
+<hr>
 <form action="./query" method="POST">
     <div>
         <input name="search" id="search">

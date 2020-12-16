@@ -11,6 +11,7 @@ import (
     "io"
     "io/ioutil"
     "os/exec"
+    "net/url"
 )
 
 var is_head = true
@@ -211,7 +212,13 @@ func query(w http.ResponseWriter, r *http.Request) {
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
-    path := fmt.Sprintf(".%s", r.URL.Path)
+    url, err := url.PathUnescape(r.URL.Path)
+    if err != nil {
+        w.Write([]byte("url decode error."))
+        return
+    }
+    url = strings.TrimSpace(url)
+    path := fmt.Sprintf(".%s", url)
     
     if ok := IsFile(path); !ok {
         w.Write([]byte("404 file not exist."))

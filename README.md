@@ -20,7 +20,12 @@ most simple static web server
 ##  使用
 
 1. 将 markdown 文件放到 `main.go` 目录下，执行 `bash genindex.sh`
-2.  执行 `go build main.go && ./main`
+2.  执行 `go build main.go && ./main`, 如果要以后台程序执行，那么编译后执行 `bash run.sh`
+
+
+## 注意
+
+1. markdown 文件名不要包含空格
 
 
 
