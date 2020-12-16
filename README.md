@@ -49,9 +49,11 @@ md  文件渲染效果
 ![image-20201215012905597](image/image-20201215012905597.png)
 
 全文检索功能
+
 ![query](image/query.png)
 
 全文检索效果
+
 ![query](image/query2.png)
 
 ## 使用的工具或者库
