@@ -1,4 +1,5 @@
-#!/bin/python
+#!/bin/python3
+# -*- coding: utf-8 -*-
 
 import re
 
@@ -21,12 +22,20 @@ with open("temp.file", "r") as f:
 
 
 head = '''
-<!DOCTYPE html>
+<!DOCTYPE html><script src="https://cdn.jsdelivr.net/npm/texme@0.9.0"></script>
 <html>
 <head>
 <title>Page Title</title>
 </head>
 <body>
+
+<form action="./query" method="POST">
+    <div>
+        <input name="search" id="search">
+        <button>全文检索</button>
+    </div>
+    <hr>
+</form>
 '''
 
 tail = '''
