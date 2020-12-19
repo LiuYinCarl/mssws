@@ -40,6 +40,46 @@ func IsFile(path string) bool {
 	return !IsDir(path)
 }
 
+// strings.Split 函数切割数组后可能会出现空字符串,违反直觉，这个函数用来去掉空字符串
+func Split(s string, sep string) []string {
+	tmp := strings.Split(s, sep)
+	res := make([]string, 0)
+	for _, k := range tmp {
+		if k != "" {
+			res = append(res, k)
+		}
+	}
+	return res
+}
+
+func GetContentType(suffix string) string {
+    switch suffix {
+    case "html":
+        return "text/html;charset=utf-8"
+    case "ico":
+        return "image/x-icon"
+    case "js":
+        return "application/x-javascript"
+    case "css":
+        return "text/css"
+    case "pdf":
+        return "application/pdf"
+    case "png":
+        return "application/x-png"
+    case "svg":
+        return "text/xml"
+    case "ttf":
+        return "application/x-font-truetype"
+    case "woff":
+    case "woff2":
+        return "application/x-font-woff"
+    default:
+        return "text/html;charset=utf-8"
+    }
+    // not used, but Go want me add it.
+    return "text/html;charset=utf-8"
+}
+
 func TransLine(line string) string {
     if ok := strings.Contains(line, "```"); ok {
         if strings.Index(line, "```") != 0{
@@ -75,7 +115,7 @@ func GetHead(title string) string {
           <script >hljs.initHighlightingOnLoad();</script> 
           </head>`
 
-          return html + "<a href=\"http://47.93.196.173:7878/index.html\">Home Page</a>\n\n"
+          return html + "<a href=\"http://www.bearcarl.top/index.html\">Home Page</a>\n\n"
 }
 
 func Md2html(file_path string) []byte {
@@ -119,7 +159,7 @@ var query_result_head = `
     </head>
     <body>
     <div>
-    the key world was found in the following files:
+    the keyword was found in the following files:
     </div>
     <hr>
     `
@@ -212,6 +252,16 @@ func query(w http.ResponseWriter, r *http.Request) {
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
+    if r.URL.Path == "/" || r.URL.Path == "" {
+        content, err := ioutil.ReadFile("index.html")
+        if err != nil {
+            w.Write([]byte("index.html no exist."))
+            return
+        }
+        w.Write(content)
+        return
+    }
+
     url, err := url.PathUnescape(r.URL.Path)
     if err != nil {
         w.Write([]byte("url decode error."))
@@ -225,12 +275,24 @@ func index(w http.ResponseWriter, r *http.Request) {
         return
     }
     
+
+    suffix := ""
+    if split_list := Split(path, "."); len(split_list) > 1 {
+        suffix = split_list[len(split_list)-1]
+    }
+    content_type := GetContentType(suffix)
+    w.Header().Set("Content-Type", content_type)
+
     // markdown file
     if path[len(path)-3:] == ".md" {
         content := Md2html(path)
         w.Write(content)
     } else {
-        content, _ := ioutil.ReadFile(path)
+        content, err := ioutil.ReadFile(path)
+        if err != nil {
+            w.Write([]byte("404 file not exists."))
+            return
+        }
         w.Write(content)
     }
 }
@@ -238,7 +300,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 func main() {
     ip := "0.0.0.0"
-    port := "7878"
+    port := "80"
 
     http.HandleFunc("/", index)
     http.HandleFunc("/query", query)

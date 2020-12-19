@@ -32,6 +32,8 @@ head = '''
 github: <a href="https://github.com/LiuYinCarl/mssws">mssws</a>
 </div>
 <hr>
+文档: <a href="http://www.bearcarl.top/doc.html">Document</a>
+<hr>
 <form action="./query" method="POST">
     <div>
         <input name="search" id="search">
@@ -46,8 +48,7 @@ tail = '''
 </html>
 '''
 
-f2 = open("index.html", "w")
-f2.write(head)
-f2.writelines(lst)
-f2.write(tail)
-f2.close()
+with open("index.html", "w") as f2:
+    f2.write(head)
+    f2.writelines(lst)
+    f2.write(tail)

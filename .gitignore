@@ -1,4 +1,7 @@
 main
-/blogs
+/blog
+/reference
+/boost_1_72_0
+/libevent-book
 query.data
 temp.file
