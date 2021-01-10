@@ -23,6 +23,11 @@ most simple static web server
 2.  执行 `go build main.go && ./main`, 如果要以后台程序执行，那么编译后执行 `bash run.sh`
 
 
+## 示例
+
+[示例站点](http://www.bearcarl.top/)
+
+
 ## 注意
 
 1. markdown 文件名不要包含空格
