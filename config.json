@@ -1,0 +1,12 @@
+{
+    "SiteTitle" : "www.bearcarl.top",
+    "HomePageLink" : "/index.html",
+    "HomePageTitle" : "Home Page",
+    "FootPrint" : "<a href=\"https://beian.miit.gov.cn/\" target=\"_blank\">赣ICP备17007680号-1</a>",
+    "TexmeCDNLink" : "https://cdn.jsdelivr.net/npm/texme@0.9.0",
+    "HighlightCDNLink" : "https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js",
+    "HighlightThemeCDNLink" : "https://cdn.bootcss.com/highlight.js/9.12.0/styles/atom-one-dark.min.css",
+    "BlogDir" : "./blog",
+	"IP" : "0.0.0.0",
+	"Port" : "80"
+}

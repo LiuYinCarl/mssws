@@ -2,7 +2,12 @@
 
 tree ./blog -f -P "*.md" -I "*.assets" > temp.file
 
-python genindex.py
+
+if hash python3 2>/dev/null; then
+	python3 genindex.py
+else
+	python genindex.py
+fi
 
 rm temp.file
 
