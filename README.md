@@ -23,8 +23,23 @@ most simple static web server
 2.  执行 `go build main.go && ./main`, 如果要以后台程序执行，那么编译后执行 `bash run.sh`
 
 
-# 项目结构
+## 项目结构
 
+``` bash
+
+├── LICENSE
+├── README.md
+├── article_tempplate.html  # 文章展示模板 
+├── config.json         # 配置文件
+├── doc.html            # 可以不用管
+├── genindex.py         # 生成 indx.html, 被genindex.sh调用
+├── genindex.sh         # 更新index.html的脚本，每次修改修改博客目录后执行一遍   
+├── image
+├── main.go             # 主要代码，负责将markdowm文件转换为html文件，运行服务器 
+├── pull_and_update.sh  # 可以不用管
+├── query_template.html # 查询结果展示模板
+└── run.sh
+```
 
 
 ## 示例
