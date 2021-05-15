@@ -44,7 +44,7 @@ most simple static web server
 
 ## 示例
 
-[示例站点](http://www.bearcarl.top/)
+[示例站点](http://www.man6.org/)
 
 
 ## 注意
