@@ -45,7 +45,6 @@ github: <a href="https://github.com/LiuYinCarl/mssws">mssws</a>
 
 tail = '''
 <hr>
-<a href="https://beian.miit.gov.cn/" target="_blank">赣ICP备17007680号-1</a>
 </body>
 </html>
 '''
