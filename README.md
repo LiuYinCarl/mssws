@@ -85,6 +85,13 @@ md  文件渲染效果
 
 ![query](image/query2.png)
 
+
+PDF 预览效果
+
+![show-pdf](image/show-pdf.png)
+
+
+
 ## 使用的工具或者库
 
 - texme
