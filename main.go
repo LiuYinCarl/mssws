@@ -43,7 +43,7 @@ type Article struct {
 
 var conf config
 var confPath = "./config.json"
-var articleTemplatePath = "./article_tempplate.html"
+var articleTemplatePath = "./article_template.html"
 var queryTemplatePath = "./query_template.html"
 var is_head = true
 var query_file = "query.data"

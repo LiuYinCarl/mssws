@@ -97,4 +97,7 @@ md  文件渲染效果
 增加了全文检索功能
 
 2021/5/07
-升级 texme 版本，支持 markdowm table 语法了
+升级 texme 版本，支持 markdowm table 语法
+
+2021/05/27
+使用 pdf.js，增加了对 pdf 文件的在线预览支持
