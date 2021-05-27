@@ -23,7 +23,7 @@ with open("temp.file", "r") as f:
         if s:
             path = s.group()
             filename = path.split("/")[-1]
-            new_s = '<a href="./pdfjs-2.7.570-dist/web/viewer.html?file=../../%s">%s</a>' %(path, filename)
+            new_s = '<a href="./pdfjs-2.7.570-dist/web/viewer.html?file=/%s">%s</a>' %(path, filename)
             line = line.replace(path, new_s)
             lst.append(line + '</br>')
             continue
