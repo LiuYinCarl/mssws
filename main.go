@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"time"
 )
 
 type config struct {
@@ -28,6 +29,9 @@ type config struct {
 	BlogDir               string `json:"BlogDir"`
 	IP                    string `json:"IP"`
 	Port                  string `json:"Port"`
+	OpenDirMonitor        string `json:"OpenDirMonitor"`
+	MonitorScript         string `json:"MonitorScript"`
+	MonitorRefreshTick    time.Duration    `json:"MonitorRefreshTick"`
 }
 
 type Article struct {
@@ -62,6 +66,17 @@ func loadConfig() bool {
 		return false
 	}
 	return true
+}
+
+// 文件监控
+func dirMonitor() {
+	c := time.Tick(conf.MonitorRefreshTick * time.Second)
+	for _ = range c {
+		cmd := exec.Command("bash", conf.MonitorScript)
+		if err := cmd.Run(); err != nil {
+			fmt.Printf("run dir monitorScript:%s failed\n", conf.MonitorScript)
+		}
+	}
 }
 
 func Exists(path string) bool {
@@ -341,6 +356,10 @@ func index(w http.ResponseWriter, r *http.Request) {
 func main() {
 	loadConfig()
 
+	if conf.OpenDirMonitor == "true" {
+		go dirMonitor()
+	}
+	
 	http.HandleFunc("/", index)
 	http.HandleFunc("/query", query)
 

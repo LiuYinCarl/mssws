@@ -7,6 +7,9 @@
     "HighlightCDNLink" : "https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js",
     "HighlightThemeCDNLink" : "https://cdn.bootcss.com/highlight.js/9.12.0/styles/atom-one-dark.min.css",
     "BlogDir" : "./blog",
-	"IP" : "0.0.0.0",
-	"Port" : "80"
+    "IP" : "0.0.0.0",
+    "Port" : "80",
+    "OpenDirMonitor" : "true",
+    "MonitorScript" : "directory_monitor.sh",
+    "MonitorRefreshTick" : 1
 }
