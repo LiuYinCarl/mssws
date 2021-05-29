@@ -38,7 +38,7 @@ Vary simple to build blog site and render Markdown, Latex and PDF.
 1. build a `blog` directory in `mssws` directory.
 2. copy your markdown or PDF files into `blog` directory.
 3. run script `genindex.sh`.
-4. run Golang command `go build main.go` to compile server program.
+4. ~~run Golang command `go build main.go` to compile server program.~~
 5. run script `run.sh`.
 
 ##  使用
@@ -46,7 +46,7 @@ Vary simple to build blog site and render Markdown, Latex and PDF.
 1. 在 `mssws` 目录下建一个目录 `blog`。
 2. 将 markdown 文件和 PDF 文件复制到 `blog` 目录下。
 3. 执行脚本 `genindex.sh`。
-4. 执行 Golang 命令 `go build main.go` 来编译服务器程序。
+4. ~~执行 Golang 命令 `go build main.go` 来编译服务器程序。~~
 5. 执行脚本 `run.sh`。
 
 
