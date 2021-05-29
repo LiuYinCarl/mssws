@@ -50,10 +50,6 @@ Vary simple to build blog site and render Markdown, Latex and PDF.
 5. 执行脚本 `run.sh`。
 
 
-1. 将 markdown 文件放到 `main.go` 目录下，执行 `bash genindex.sh`
-2.  执行 `go build main.go && ./main`, 如果要以后台程序执行，那么编译后执行 `bash run.sh`
-
-
 ## 项目结构|Project structure
 
 ``` bash
