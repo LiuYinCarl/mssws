@@ -5,6 +5,7 @@ fi
 
 progress="mssws_prog"
 
+echo "compile mssws_prog ..."
 go build -o $progress main.go
 
 pids=`ps -ef | grep ${progress} | grep -v grep | grep -v PPID | awk '{print $2}'`
@@ -15,7 +16,6 @@ do
 done
 
 echo "start run mssws ..."
-
 nohup ${progress} &>/dev/null &
 
 pids=`ps -ef | grep ${progress} | grep -v grep | grep -v PPID | awk '{print $2}'`
