@@ -1,6 +1,6 @@
 #!/bin/bash
 
-tree ./blog --prune -f -P "*.md|*.pdf" -I "*.assets" > temp.file
+tree ./blog -f -P "*.md|*.pdf" -I "*.assets" --prune --ignore-case > temp.file
 
 
 if hash python3 2>/dev/null; then
