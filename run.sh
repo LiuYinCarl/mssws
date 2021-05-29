@@ -16,7 +16,7 @@ do
 done
 
 echo "start run mssws ..."
-nohup ${progress} &>/dev/null &
+nohup ./${progress} &>/dev/null &
 
 pids=`ps -ef | grep ${progress} | grep -v grep | grep -v PPID | awk '{print $2}'`
 for p in ${pids}
@@ -24,6 +24,5 @@ do
     echo "run progress ${progress} [ ${p} ] success ..."
     exit
 done
-
 echo "run progress ${progress} failed ..."
 
