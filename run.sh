@@ -68,6 +68,7 @@ elif [ $1 = "kill" ]; then
     f_get_pids
     for p in ${g_pids}; do
 	echo "kill ${exec_name} [ ${p} ]"
+	kill ${p}
     done
 
 elif [ $1 = "compile" ]; then
