@@ -36,15 +36,17 @@ Vary simple to build blog site and render Markdown, Latex and PDF.
 
 1. build a `blog` directory in `mssws` directory
 2. copy your markdown or PDF files into `blog` directory
-3. run script `genindex.sh`
-4. run script `run.sh`
+3. run script `run.sh`
+
+If you want to see more info about how to run the program, run `./run.sh help`
 
 ##  使用
 
 1. 在 `mssws` 目录下建一个目录 `blog`
 2. 将 markdown 文件和 PDF 文件复制到 `blog` 目录下
-3. 执行脚本 `genindex.sh`
-4. 执行脚本 `run.sh`
+3. 执行脚本 `run.sh`
+
+如果想知道更多关于程序的信息，请执行命令 `./run.sh help`
 
 
 ## 项目结构|Project structure
@@ -61,7 +63,7 @@ Vary simple to build blog site and render Markdown, Latex and PDF.
 ├── main.go               # server code，turn markdowmto html and run server 
 ├── pull_and_update.sh    # can delete
 ├── query_template.html   # template to show full text search result 
-└── run.sh                # run the server
+└── run.sh                # run the server and more operations
 ```
 
 
@@ -153,14 +155,21 @@ use PDF.js, support PDF file preview
 2021/05/29
 
 add file suffix detect, only support `.md` or `.pdf` suffix, any not meet
-standard file will print a warning when using `genindex.sh` to generate `index.html`.
+standard file will print a warning when using `genindex.sh` to generate `index.html`
 
 增加对文件后缀的检测，只支持标准的 `.md`, `.pdf` 后缀，对于不符合标准的文件会在
-生成 index.html 的时候给出提示。
+生成 index.html 的时候给出提示
 
 
 2021/05/30
 
-add directory monitor feature, if you open the feature, when the `blog` directory changed, will auto call `genindex.sh` then generate `index.html`.
+add directory monitor feature, if you open the feature, when the `blog` directory changed, will auto call `genindex.sh` then generate `index.html`
 
-增加目录监控功能，如果开启该功能，可以在 `blog` 目录发生变化的时候自动执行 `genindex.sh` 脚本，更新 `index.html`。
+增加目录监控功能，如果开启该功能，可以在 `blog` 目录发生变化的时候自动执行 `genindex.sh` 脚本，更新 `index.html`
+
+
+2021/06/01
+
+rewrite `run.sh`, now you can control the program only `run.sh`, execute `./run.sh help` to get more information
+
+重构了 `run.sh` 脚本，现在可以只通过这一个脚本管理整个程序，要查看更多信息的话请执行 `./run.sh help`
