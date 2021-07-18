@@ -61,7 +61,6 @@ If you want to see more info about how to run the program, run `./run.sh help`
 ├── genindex.py           # generate indx.html, called by genindex.sh
 ├── genindex.sh           # update index.html，run it every time you changed blog directory
 ├── main.go               # server code，turn markdowmto html and run server 
-├── pull_and_update.sh    # can delete
 ├── query_template.html   # template to show full text search result 
 └── run.sh                # run the server and more operations
 ```
