@@ -54,6 +54,7 @@ head = '''
 <!DOCTYPE html><script src="https://cdn.jsdelivr.net/npm/texme@0.9.0"></script>
 <html>
 <head>
+<meta charset="UTF-8">
 <title>Home Page</title>
 </head>
 <body>
