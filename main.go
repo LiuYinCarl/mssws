@@ -148,7 +148,7 @@ func GetContentType(suffix string) string {
 	case "png":
 		return "application/x-png"
 	case "svg":
-		return "text/xml"
+		return "image/svg+xml"
 	case "ttf":
 		return "application/x-font-truetype"
 	case "woff":
