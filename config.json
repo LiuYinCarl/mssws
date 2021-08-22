@@ -11,5 +11,16 @@
     "Port" : "80",
     "OpenDirMonitor" : "true",
     "MonitorScript" : "directory_monitor.sh",
-    "MonitorRefreshTick" : 1
+    "MonitorRefreshTick" : 10,
+
+    "SiteLinks" : [
+	{
+	    "Title": "文档",
+	    "Url" : "http://www.bearcarl.top/doc.html"
+	},
+	{
+	    "Title" : "Github",
+	    "Url" : "https://github.com/LiuYinCarl/mssws/"
+	}
+    ]
 }

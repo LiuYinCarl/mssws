@@ -55,16 +55,91 @@ If you want to see more info about how to run the program, run `./run.sh help`
 
 ├── LICENSE
 ├── README.md
-├── article_template.html # article template
-├── config.json           # config file
-├── doc.html              # page to my doc
-├── genindex.py           # generate indx.html, called by genindex.sh
-├── genindex.sh           # update index.html，run it every time you changed blog directory
-├── main.go               # server code，turn markdowmto html and run server 
-├── query_template.html   # template to show full text search result 
-└── run.sh                # run the server and more operations
+├── article_template.html
+├── blog   # default blog directory
+├── config.json
+├── directory_monitor.sh
+├── genindex.py  # generate index.data, called by genindex.sh
+├── genindex.sh  # update index.data, will auto run if you use default config
+├── image
+├── index.data   # save your blog directory's `tree` command output
+├── index_template.html
+├── main.go      # main logic
+├── pdfjs-2.7.570-dist  # pdfjs lib
+├── query.data   # save all files which suppport full text search
+├── query_template.html
+└── run.sh       # run the server and more operations 
+
 ```
 
+## config
+
+``` json
+{
+    "SiteTitle" : "www.bearcarl.top",
+    "HomePageLink" : "/index.html",
+    "HomePageTitle" : "Home Page",
+    "FootPrint" : "",
+    "TexmeCDNLink" : "https://cdn.jsdelivr.net/npm/texme@1.0.0",
+    "HighlightCDNLink" : "https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js",
+    "HighlightThemeCDNLink" : "https://cdn.bootcss.com/highlight.js/9.12.0/styles/atom-one-dark.min.css",
+    "BlogDir" : "./blog",
+    "IP" : "0.0.0.0",
+    "Port" : "80",
+    "OpenDirMonitor" : "true",
+    "MonitorScript" : "directory_monitor.sh",
+    "MonitorRefreshTick" : 10,
+
+    // the first line of index page, you can save some other website's link
+    "SiteLinks" : [
+	{
+	    "Title": "文档",
+	    "Url" : "http://www.bearcarl.top/doc.html"
+	},
+	{
+	    "Title" : "Github",
+	    "Url" : "https://github.com/LiuYinCarl/mssws/"
+	}
+    ]
+}
+
+```
+
+## 配置
+
+``` json
+{
+    "SiteTitle" : "www.bearcarl.top",
+    "HomePageLink" : "/index.html",
+    "HomePageTitle" : "Home Page",
+    // 页面最下面一行 可以用来放置备案号等信息
+    "FootPrint" : "",
+    "TexmeCDNLink" : "https://cdn.jsdelivr.net/npm/texme@1.0.0",
+    "HighlightCDNLink" : "https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js",
+    "HighlightThemeCDNLink" : "https://cdn.bootcss.com/highlight.js/9.12.0/styles/atom-one-dark.min.css",
+    "BlogDir" : "./blog",
+    "IP" : "0.0.0.0",
+    "Port" : "80",
+    // 是否开启文件夹监控，在博客文件夹更新后可以迅速更新主页
+    "OpenDirMonitor" : "true",
+    // 文件夹监控脚本
+    "MonitorScript" : "directory_monitor.sh",
+    // 文件夹监控间隔时间
+    "MonitorRefreshTick" : 10,
+    // 主页的最上面一行，用来放置链接
+    "SiteLinks" : [
+	{
+	    "Title": "文档",
+	    "Url" : "http://www.bearcarl.top/doc.html"
+	},
+	{
+	    "Title" : "Github",
+	    "Url" : "https://github.com/LiuYinCarl/mssws/"
+	}
+    ]
+}
+
+```
 
 ## 示例|Example
 
@@ -172,3 +247,8 @@ add directory monitor feature, if you open the feature, when the `blog` director
 rewrite `run.sh`, now you can control the program only `run.sh`, execute `./run.sh help` to get more information
 
 重构了 `run.sh` 脚本，现在可以只通过这一个脚本管理整个程序，要查看更多信息的话请执行 `./run.sh help`
+
+2021/08/22
+
+add index page link, now you can easy to add some link in the index page. delete some useless files
+添加了主页链接自定义配置功能，现在可以在主页上轻松的加上导航链接了。删除了一些无用的文件。

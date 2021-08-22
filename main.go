@@ -18,6 +18,11 @@ import (
 	"time"
 )
 
+type SiteLink struct {
+	Title string `json:"Title"`
+	Url   string `json: "Url"`
+}
+
 type config struct {
 	SiteTitle             string `json:"SiteTitle"`
 	HomePageLink          string `json:"HomePageLink"`
@@ -32,6 +37,7 @@ type config struct {
 	OpenDirMonitor        string `json:"OpenDirMonitor"`
 	MonitorScript         string `json:"MonitorScript"`
 	MonitorRefreshTick    time.Duration    `json:"MonitorRefreshTick"`
+	SiteLinks             []SiteLink `json:"SiteLinks"`
 }
 
 type Article struct {
@@ -45,8 +51,21 @@ type Article struct {
 	Content               template.HTML
 }
 
+type Index struct {
+	SiteTitle string
+	FootPrint template.HTML
+	TexmeCDNLink string
+	HighlightCDNLink string
+	HighlightThemeCDNLink string
+	Content template.HTML
+	SiteLinks []SiteLink
+}
+
+
+
 var conf config
 var confPath = "./config.json"
+var indexTemplatePath = "./index_template.html"
 var articleTemplatePath = "./article_template.html"
 var queryTemplatePath = "./query_template.html"
 var is_head = true
@@ -56,13 +75,13 @@ var query_file = "query.data"
 func loadConfig() bool {
 	data, err := ioutil.ReadFile(confPath)
 	if err != nil {
-		// fmt.Printf("read config file failed. file path is %s", confPath)
+		fmt.Printf("read config file failed. file path is %s", confPath)
 		return false
 	}
 
 	err = json.Unmarshal(data, &conf)
 	if err != nil {
-		// fmt.Printf("config.json's content is error")
+		fmt.Printf("config.json's content is error")
 		return false
 	}
 	return true
@@ -143,22 +162,17 @@ func GetContentType(suffix string) string {
 }
 
 func TransLine(line string) string {
-	if ok := strings.Contains(line, "```"); ok {
-		if strings.Index(line, "```") != 0 {
-			return line
-		}
-
+	if pos := strings.Index(line, "```"); pos != -1 {
 		line := strings.TrimSpace(line)
 		if len(line) == 3 {
+			retLine := ""
 			if is_head {
-				ret := "<pre><code class=\"\">"
-				is_head = false
-				return ret
+				retLine = "<pre><code class=\"\">"
 			} else {
-				ret := "</code></pre>"
-				is_head = true
-				return ret
+				retLine = "</code></pre>"
 			}
+			is_head = !is_head;
+			return retLine;
 		} else {
 			is_head = false
 			return fmt.Sprintf("<pre><code class=\"%s\">", line[3:])
@@ -289,22 +303,47 @@ func query(w http.ResponseWriter, r *http.Request) {
 	temp.Execute(w, article)
 }
 
-func index(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == "/" || r.URL.Path == "" {
-		content, err := ioutil.ReadFile("index.html")
-		if err != nil {
-			w.Write([]byte("index.html no exist."))
-			return
-		}
-		w.Write(content)
+func indexPage(w http.ResponseWriter, r *http.Request) {
+	content, err := ioutil.ReadFile("index.data")
+	if err != nil {
+		w.Write([]byte("Sorry, Index Page Not Exist."))
 		return
 	}
 
+	content_type := GetContentType("html")
+	w.Header().Set("Content-Type", content_type)
+
+	temp, err := template.ParseFiles(indexTemplatePath)
+	if err != nil {
+		w.Write([]byte("load index template file failed."))
+		return
+	}
+
+	index := Index{
+		SiteTitle: "index.html",
+		FootPrint: template.HTML(conf.FootPrint),
+		TexmeCDNLink: conf.TexmeCDNLink,
+		HighlightCDNLink: conf.HighlightCDNLink,
+		HighlightThemeCDNLink: conf.HighlightThemeCDNLink,
+		Content: template.HTML(string(content)),
+		SiteLinks: conf.SiteLinks,
+	}
+	
+	temp.Execute(w, index)
+}
+
+func index(w http.ResponseWriter, r *http.Request) {
 	url, err := url.PathUnescape(r.URL.Path)
 	if err != nil {
 		w.Write([]byte("url decode error."))
 		return
 	}
+	
+	if url == "/" || url == "" || strings.ToLower(url) == "/index.html" {
+		indexPage(w, r)
+		return
+	}
+
 	url = strings.TrimSpace(url)
 	filePath := fmt.Sprintf(".%s", url)
 
@@ -312,6 +351,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("404 file not exist."))
 		return
 	}
+
 
 	suffix := ""
 	if split_list := Split(filePath, "."); len(split_list) > 1 {
@@ -346,16 +386,17 @@ func index(w http.ResponseWriter, r *http.Request) {
 	} else {
 		content, err := ioutil.ReadFile(filePath)
 		if err != nil {
-			w.Write([]byte("404 file not exists."))
+			w.Write([]byte("404 file not exist."))
 			return
 		}
 		w.Write(content)
 	}
 }
 
+
 func main() {
 	loadConfig()
-
+	
 	if conf.OpenDirMonitor == "true" {
 		go dirMonitor()
 	}

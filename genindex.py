@@ -50,36 +50,5 @@ with open("temp.file", "r") as f:
 
 
 
-head = '''
-<!DOCTYPE html><script src="https://cdn.jsdelivr.net/npm/texme@0.9.0"></script>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Home Page</title>
-</head>
-<body>
-<div>
-github: <a href="https://github.com/LiuYinCarl/mssws">mssws</a>
-</div>
-<hr>
-文档: <a href="http://www.bearcarl.top/doc.html">Document</a>
-<hr>
-<form action="./query" method="POST">
-    <div>
-        <input name="search" id="search">
-        <button>全文检索</button>
-    </div>
-    <hr>
-</form>
-'''
-
-tail = '''
-<hr>
-</body>
-</html>
-'''
-
-with open("index.html", "w") as f2:
-    f2.write(head)
+with open("index.data", "w") as f2:
     f2.writelines(lst)
-    f2.write(tail)
