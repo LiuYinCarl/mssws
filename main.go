@@ -320,7 +320,7 @@ func indexPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	index := Index{
-		SiteTitle: "index.html",
+		SiteTitle: conf.SiteTitle,
 		FootPrint: template.HTML(conf.FootPrint),
 		TexmeCDNLink: conf.TexmeCDNLink,
 		HighlightCDNLink: conf.HighlightCDNLink,
