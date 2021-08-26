@@ -83,7 +83,8 @@ If you want to see more info about how to run the program, run `./run.sh help`
     "TexmeCDNLink" : "https://cdn.jsdelivr.net/npm/texme@1.0.0",
     "HighlightCDNLink" : "https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js",
     "HighlightThemeCDNLink" : "https://cdn.bootcss.com/highlight.js/9.12.0/styles/atom-one-dark.min.css",
-    "BlogDir" : "./blog",
+    // don't change the BlogDir, this version change the BlogDir will cause a bug
+	"BlogDir" : "./blog",
     "IP" : "0.0.0.0",
     "Port" : "80",
     "OpenDirMonitor" : "true",
@@ -117,7 +118,8 @@ If you want to see more info about how to run the program, run `./run.sh help`
     "TexmeCDNLink" : "https://cdn.jsdelivr.net/npm/texme@1.0.0",
     "HighlightCDNLink" : "https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js",
     "HighlightThemeCDNLink" : "https://cdn.bootcss.com/highlight.js/9.12.0/styles/atom-one-dark.min.css",
-    "BlogDir" : "./blog",
+    // 请不要修改 BlogDir 配置，该版本尚不支持，强行修改会产生bug
+	"BlogDir" : "./blog",
     "IP" : "0.0.0.0",
     "Port" : "80",
     // 是否开启文件夹监控，在博客文件夹更新后可以迅速更新主页

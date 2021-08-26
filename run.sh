@@ -52,6 +52,8 @@ if [ ! -f ${genindex_script} ]; then
 fi
 
 if [ $# = 0 ]; then
+    echo "compile ${exec_name} ..."
+    go build -o ${exec_name} ${go_src}
     f_run_program
     exit
 fi
