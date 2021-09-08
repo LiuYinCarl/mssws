@@ -184,6 +184,8 @@ func TransLine(line string) string {
 func Md2html(file_path string) []byte {
 	var new_lines []string
 
+	new_lines = append(new_lines, "\\begin{md}\n")
+
 	md_file, err := os.Open(file_path)
 	if err != nil {
 		return []byte("internal error")
@@ -200,6 +202,8 @@ func Md2html(file_path string) []byte {
 		l := TransLine(string(line)) + "\n"
 		new_lines = append(new_lines, l)
 	}
+
+	new_lines = append(new_lines, "\\end{md}\n")
 
 	var buffer bytes.Buffer
 	for _, s := range new_lines {
