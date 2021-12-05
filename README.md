@@ -202,9 +202,9 @@ admin page
 
 admin 页面
 
-visit you_site_url/admin/ to manage your server
+visit you_site_url/admin/ to manage your server, *set admin's password in admin.sh*
 
-访问 你的网站/admin/ 页面来管理你的服务器
+访问 你的网站/admin/ 页面来管理你的服务器, *在 admin.sh 脚本中设置 admin 的密码*
 
 
 
