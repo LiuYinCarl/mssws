@@ -3,6 +3,7 @@
 exec_name="mssws_prog"
 go_src="main.go"
 genindex_script="genindex.sh"
+admin_script="admin.sh"
 
 # save result of get_pids
 g_pids=()
@@ -30,6 +31,7 @@ function f_run_program() {
     f_get_pids
     for p in ${g_pids}; do
 	echo "kill ${exec_name} [ ${p} ]"
+	kill ${p}
     done
     
     echo "start run ${exec_name} ..."
@@ -45,6 +47,10 @@ function f_run_program() {
 
 
 ################################################################################
+
+if [ -f ${admin_script} ]; then
+    chmod a+x ${admin_script}
+fi
 
 if [ ! -f ${genindex_script} ]; then
     echo "${genindex_script} not exist!"

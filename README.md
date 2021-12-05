@@ -198,6 +198,17 @@ PDF 预览效果
 ![show-pdf](image/show-pdf.png)
 
 
+admin page
+
+admin 页面
+
+visit you_site_url/admin/ to manage your server
+
+访问 你的网站/admin/ 页面来管理你的服务器
+
+
+
+
 ## 使用的工具或者库 | Used tool or library
 
 - texme
@@ -253,4 +264,11 @@ rewrite `run.sh`, now you can control the program only `run.sh`, execute `./run.
 2021/08/22
 
 add index page link, now you can easy to add some link in the index page. delete some useless files
+
 添加了主页链接自定义配置功能，现在可以在主页上轻松的加上导航链接了。删除了一些无用的文件。
+
+2021/12/05
+
+add admin feature, you can visit /admin page to use some user-defined command, such as update blog
+
+增加了 admin 功能，通过访问 /admin 页面可以执行一些自定义的命令,例如更新 blog 仓库
