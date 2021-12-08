@@ -450,7 +450,7 @@ func main() {
 	}
 	
 	http.HandleFunc("/", index)
-	http.HandleFunc("/query/", query)
+	http.HandleFunc("/query", query)
 	http.HandleFunc("/admin/", admin)
 
 	ip_port := conf.IP + ":" + conf.Port
