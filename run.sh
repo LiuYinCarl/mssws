@@ -55,6 +55,9 @@ fi
 if [ ! -f ${genindex_script} ]; then
     echo "${genindex_script} not exist!"
     exit
+else
+    sh ${genindex_script}
+    echo "generate index page data"
 fi
 
 if [ $# = 0 ]; then
