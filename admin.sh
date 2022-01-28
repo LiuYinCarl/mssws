@@ -2,7 +2,7 @@
 # visit url: your_mssws_site/admin to run this script
 
 
-admin_password="kenshin"
+admin_password="your_password"
 blog_dir="./blog"
 log_file="admin.log"
 
