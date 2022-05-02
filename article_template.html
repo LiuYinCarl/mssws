@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <script>window.texme = { style: 'none' }</script>
 <style>
-  body {
-      background: #444;
-  }
-  main {
-      background: #fff;
-      padding: 5em 6em;
-      margin: 1em auto;
-      box-shadow: 0.4em 0.4em 0.4em #222;
-      max-width: 60em;
+  @media screen and (min-width: 40em) {
+      body {
+	  background: #444;
+      }
+      main {
+	  background: #fff;
+	  padding: 5em 6em;
+	  margin: 1em auto;
+	  box-shadow: 0.4em 0.4em 0.4em #222;
+	  max-width: 60em;
+      }
   }
 </style>
 
@@ -18,7 +20,7 @@
   <meta charset="UTF-8">
   <title>{{ .SiteTitle }}</title>
   
-<script src="{{ .TexmeCDNLink }}"></script>
+  <script src="{{ .TexmeCDNLink }}"></script>
   <link href="{{ .HighlightThemeCDNLink }}" rel="stylesheet">
   <script src="{{ .HighlightCDNLink }}"></script>
   <script >hljs.initHighlightingOnLoad();</script> 
