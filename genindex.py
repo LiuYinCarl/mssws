@@ -11,9 +11,25 @@ def read_conf():
         conf = json.load(f)
         return conf
 
+def filename_check(filename):
+    if " " in filename:
+        print("[file name check] {}: space in filename".format(filename))
+        return False
+
+    suffix = os.path.splitext(filename)[-1]
+    if suffix.lower() == ".pdf" and suffix != ".pdf":
+        print("[file name check] {} : file suffix error, use '.pdf'".format(filename))
+        return False
+
+    if suffix.lower() == ".md" and suffix != ".md":
+        print("[file name check] {} : file suffix error, use '.md'".format(filename))
+        return False
+
+    return True
+
 def gen_rss_file(items):
     conf = read_conf()
-    
+
     head = """<?xml version="1.0" encoding="UTF-8" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 <channel>
@@ -50,27 +66,13 @@ def gen_rss_file(items):
     with open(conf["RssFile"], "w") as f:
         f.write(head + item_info + tail)
 
-
-def filename_check(filename):
-    if " " in filename:
-        print("[file name check] {}: space in filename".format(filename))
-        return False
-        
-    suffix = os.path.splitext(filename)[-1] 
-    if suffix.lower() == ".pdf" and suffix != ".pdf":
-        print("[file name check] {} : file suffix error, use '.pdf'".format(filename))
-        return False
-        
-    if suffix.lower() == ".md" and suffix != ".md":
-        print("[file name check] {} : file suffix error, use '.md'".format(filename))
-        return False
-
-    return True
+def gen_index_file(index_file_line):
+    with open("index.data", "w") as f2:
+        f2.writelines(index_file_line)
 
 
-lst = []
+index_file_line = []
 rss_items = []
-
 
 with open("temp.file", "r") as f:
     lines = f.readlines()
@@ -80,10 +82,10 @@ with open("temp.file", "r") as f:
             path = s.group()
             filename = path.split("/")[-1]
             filename_check(filename)
-            new_s = '<a href="%s">%s</a>' % (path, filename)
+            new_s = '<a href="{}">{}</a>'.format(path, filename)
             rss_items.append((path, filename))
             line = line.replace(path, new_s)
-            lst.append(line + '</br>')
+            index_file_line.append(line + '</br>')
             continue
         
         s = re.search("\\./.*?\\.pdf$", line, re.I)
@@ -91,17 +93,13 @@ with open("temp.file", "r") as f:
             path = s.group()
             filename = path.split("/")[-1]
             filename_check(filename)
-            new_s = '<a href="./pdfjs-2.7.570-dist/web/viewer.html?file=/%s">%s</a>' %(path, filename)
+            new_s = '<a href="./pdfjs-2.7.570-dist/web/viewer.html?file=/{}">{}</a>'.format(path, filename)
             rss_items.append((path, filename))
             line = line.replace(path, new_s)
-            lst.append(line + '</br>')
+            index_file_line.append(line + '</br>')
             continue
-        lst.append(line + '</br>')
+        index_file_line.append(line + '</br>')
 
-
-
-with open("index.data", "w") as f2:
-    f2.writelines(lst)
-
+gen_index_file(index_file_line)
 gen_rss_file(rss_items)
 
