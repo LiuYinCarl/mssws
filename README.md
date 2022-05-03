@@ -198,6 +198,13 @@ PDF 预览效果
 ![show-pdf](image/show-pdf.png)
 
 
+RSS subscribe
+
+RSS 订阅
+
+![rss](image/rss.png)
+
+
 admin page
 
 admin 页面
@@ -272,3 +279,9 @@ add index page link, now you can easy to add some link in the index page. delete
 add admin feature, you can visit /admin page to use some user-defined command, such as update blog
 
 增加了 admin 功能，通过访问 /admin 页面可以执行一些自定义的命令,例如更新 blog 仓库
+
+2022/05/03
+
+add RSS support, now you can use RSS subscribe
+
+增加 RSS 功能，现在可以支持 RSS 订阅了

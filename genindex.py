@@ -3,6 +3,53 @@
 
 import re
 import os
+import json
+from urllib.request import quote, unquote
+
+def read_conf():
+    with open("./config.json", "r") as f:
+        conf = json.load(f)
+        return conf
+
+def gen_rss_file(items):
+    conf = read_conf()
+    
+    head = """<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+  <title>{}</title>
+  <link>{}</link>
+  <atom:link href="{}" rel="self" type="application/rss+xml" />
+  <description>{}</description>
+  <language>en-us</language>
+""".format(conf["RssTitle"], conf["RssLink"], conf["RssLink"], conf["RssDesc"])
+
+    tail = """
+</channel>
+</rss>
+"""
+
+    rss_items = []
+    for item in items:
+        title = item[1]
+        link = "{}{}".format(conf["SiteLink"], item[0].lstrip("."))
+        link = quote(link, safe=";/?:@&=+$,", encoding="utf-8")
+        desc = title
+        s = """
+  <item>
+    <title>{}</title>
+    <link>{}</link>
+    <description>{}</description>
+    <guid>{}</guid>
+  </item>
+""".format(title, link, desc, link)
+        rss_items.append(s)
+
+    item_info = "".join(rss_items)
+
+    with open(conf["RssFile"], "w") as f:
+        f.write(head + item_info + tail)
+
 
 def filename_check(filename):
     if " " in filename:
@@ -21,7 +68,8 @@ def filename_check(filename):
     return True
 
 
-lst = list()
+lst = []
+rss_items = []
 
 
 with open("temp.file", "r") as f:
@@ -33,6 +81,7 @@ with open("temp.file", "r") as f:
             filename = path.split("/")[-1]
             filename_check(filename)
             new_s = '<a href="%s">%s</a>' % (path, filename)
+            rss_items.append((path, filename))
             line = line.replace(path, new_s)
             lst.append(line + '</br>')
             continue
@@ -43,6 +92,7 @@ with open("temp.file", "r") as f:
             filename = path.split("/")[-1]
             filename_check(filename)
             new_s = '<a href="./pdfjs-2.7.570-dist/web/viewer.html?file=/%s">%s</a>' %(path, filename)
+            rss_items.append((path, filename))
             line = line.replace(path, new_s)
             lst.append(line + '</br>')
             continue
@@ -52,3 +102,6 @@ with open("temp.file", "r") as f:
 
 with open("index.data", "w") as f2:
     f2.writelines(lst)
+
+gen_rss_file(rss_items)
+
