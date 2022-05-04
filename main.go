@@ -138,6 +138,8 @@ func GetContentType(suffix string) string {
 	switch suffix {
 	case "html":
 		return "text/html;charset=utf-8"
+	case "xml":
+		return "application/rss+xml;charset=utf-8"
 	case "ico":
 		return "image/x-icon"
 	case "js":

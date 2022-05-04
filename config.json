@@ -1,5 +1,6 @@
 {
     "SiteTitle" : "www.man6.org",
+    "SiteLink" : "http://www.man6.org",
     "HomePageLink" : "/index.html",
     "HomePageTitle" : "Home Page",
     "FootPrint" : "",
@@ -15,12 +16,21 @@
 
     "SiteLinks" : [
 	{
-	    "Title": "文档",
-	    "Url" : "http://www.bearcarl.top/doc.html"
+	    "Title" : "文档",
+	    "Url" : "http://www.man6.org/doc.md"
 	},
 	{
 	    "Title" : "Github",
 	    "Url" : "https://github.com/LiuYinCarl/mssws/"
+	},
+	{
+	    "Title" : "RSS",
+	    "Url" : "http://www.man6.org/rss.xml"
 	}
-    ]
+    ],
+
+    "RssTitle" : "Rss of man6.org",
+    "RssLink" : "http://www.man6.org/rss.xml",
+    "RssDesc" : "a blog about tech.",
+    "RssFile" : "rss.xml"
 }
