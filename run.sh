@@ -14,23 +14,23 @@ function f_get_pids() {
 }
 
 function f_check_root_rights() {    
-    if (( $EUID != 0 )); then
+    if (( ${EUID} != 0 )); then
 	echo "Please run as root to make sure mssws can bind success."
 	exit
     fi
 }
 
 function f_run_program() {
-    #f_check_root_rights
+    f_check_root_rights
 
     if [ ! -f ${exec_name} ]; then
-	echo "${exec_name} don't exist, please run `bash run.sh compile` first"
+	echo "${exec_name} don't exist, please run `bash run.sh compile` first."
 	exit
     fi
     
     f_get_pids
     for p in ${g_pids}; do
-	echo "kill ${exec_name} [ ${p} ]"
+	echo "kill ${exec_name} [ ${p} ]."
 	kill ${p}
     done
     
@@ -57,7 +57,7 @@ if [ ! -f ${genindex_script} ]; then
     exit
 else
     sh ${genindex_script}
-    echo "generate index page data"
+    echo "generate index page data."
 fi
 
 if [ $# = 0 ]; then
