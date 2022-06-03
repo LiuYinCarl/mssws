@@ -285,3 +285,11 @@ add admin feature, you can visit /admin page to use some user-defined command, s
 add RSS support, now you can use RSS subscribe
 
 增加 RSS 功能，现在可以支持 RSS 订阅了
+
+2022/06/03
+
+To achieve zero dependence on external resources, add all need JS, CSS resource into the project
+
+为了实现对对外部资源的零依赖，将本项目需要的所有 JS CSS 资源都添加到了项目中
+
+
