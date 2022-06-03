@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"html/template"
+	"text/template"
 	"io"
 	"io/ioutil"
 	"log"
@@ -25,6 +25,7 @@ type SiteLink struct {
 
 type config struct {
 	SiteTitle             string `json:"SiteTitle"`
+	SiteLink			  string `json:"SiteLink"`
 	HomePageLink          string `json:"HomePageLink"`
 	HomePageTitle         string `json:"HomePageTitle"`
 	FootPrint             string `json:"FootPrint"`
@@ -44,20 +45,20 @@ type Article struct {
 	SiteTitle             string
 	HomePageLink          string
 	HomePageTitle         string
-	FootPrint             template.HTML
+	FootPrint             string
 	TexmeCDNLink          string
 	HighlightCDNLink      string
 	HighlightThemeCDNLink string
-	Content               template.HTML
+	Content               string
 }
 
 type Index struct {
 	SiteTitle string
-	FootPrint template.HTML
+	FootPrint string
 	TexmeCDNLink string
 	HighlightCDNLink string
 	HighlightThemeCDNLink string
-	Content template.HTML
+	Content string
 	SiteLinks []SiteLink
 }
 
@@ -85,6 +86,11 @@ func loadConfig() bool {
 		fmt.Printf("config.json's content is error")
 		return false
 	}
+
+	conf.TexmeCDNLink = conf.SiteLink + conf.TexmeCDNLink
+	conf.HighlightCDNLink = conf.SiteLink + conf.HighlightCDNLink
+	conf.HighlightThemeCDNLink = conf.SiteLink + conf.HighlightThemeCDNLink
+
 	return true
 }
 
@@ -344,11 +350,11 @@ func query(w http.ResponseWriter, r *http.Request) {
 		SiteTitle:             "",
 		HomePageLink:          conf.HomePageLink,
 		HomePageTitle:         conf.HomePageTitle,
-		FootPrint:             template.HTML(""),
+		FootPrint:             "",
 		TexmeCDNLink:          conf.TexmeCDNLink,
 		HighlightCDNLink:      conf.HighlightCDNLink,
 		HighlightThemeCDNLink: conf.HighlightThemeCDNLink,
-		Content:               template.HTML(buffer.String()),
+		Content:               buffer.String(),
 	}
 	temp.Execute(w, article)
 }
@@ -371,11 +377,11 @@ func indexPage(w http.ResponseWriter, r *http.Request) {
 
 	index := Index{
 		SiteTitle: conf.SiteTitle,
-		FootPrint: template.HTML(conf.FootPrint),
+		FootPrint: conf.FootPrint,
 		TexmeCDNLink: conf.TexmeCDNLink,
 		HighlightCDNLink: conf.HighlightCDNLink,
 		HighlightThemeCDNLink: conf.HighlightThemeCDNLink,
-		Content: template.HTML(string(content)),
+		Content: string(content),
 		SiteLinks: conf.SiteLinks,
 	}
 	
@@ -397,8 +403,10 @@ func index(w http.ResponseWriter, r *http.Request) {
 	url = strings.TrimSpace(url)
 	filePath := fmt.Sprintf(".%s", url)
 
+	fmt.Printf("filePath: %s\n", filePath)
+
 	if ok := IsFile(filePath); !ok {
-		w.Write([]byte("404 file not exist."))
+		w.Write([]byte("[404] file not exist."))
 		return
 	}
 
@@ -425,18 +433,18 @@ func index(w http.ResponseWriter, r *http.Request) {
 			SiteTitle:             articleName,
 			HomePageLink:          conf.HomePageLink,
 			HomePageTitle:         conf.HomePageTitle,
-			FootPrint:             template.HTML(conf.FootPrint),
+			FootPrint:             conf.FootPrint,
 			TexmeCDNLink:          conf.TexmeCDNLink,
 			HighlightCDNLink:      conf.HighlightCDNLink,
 			HighlightThemeCDNLink: conf.HighlightThemeCDNLink,
-			Content:               template.HTML(string(content)), // 避免模板对HTML标签进行转义
+			Content:               string(content),
 		}
 
 		temp.Execute(w, article)
 	} else {
 		content, err := ioutil.ReadFile(filePath)
 		if err != nil {
-			w.Write([]byte("404 file not exist."))
+			w.Write([]byte("404 file not exist.."))
 			return
 		}
 		w.Write(content)

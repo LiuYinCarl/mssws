@@ -21,7 +21,11 @@
   <script src="{{ .TexmeCDNLink }}"></script>
   <link href="{{ .HighlightThemeCDNLink }}" rel="stylesheet" />
   <script src="{{ .HighlightCDNLink }}"></script>
-  <script >hljs.initHighlightingOnLoad();</script>
+  <script >
+    document.addEventListener('DOMContentLoaded', function() {
+      hljs.initHighlightingOnLoad();
+    });
+</script>
 </head>
 
 <body>
