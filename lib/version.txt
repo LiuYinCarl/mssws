@@ -1,0 +1,21 @@
+The version of third party library
+
+highlight.js   11.5.1
+texme          1.2.0
+pdfjs          2.7.570
+marked         4.0.16      // needed by texme
+MathJax        3.2.1       // needed by texme
+
+WARN
+
+To achieve zero dependence on external resources，I modify lib/texme/texme.js
+
+  texme.setDefaultOptions = function () {
+    // ... ...
+
+    // Modify the resource path
+    options.markdownURL =
+      '../../lib/marked/marked.min.js'
+    options.MathJaxURL =
+      '../../lib/MathJax/es5/tex-mml-chtml.js'
+  }

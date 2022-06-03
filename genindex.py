@@ -93,7 +93,7 @@ with open("temp.file", "r") as f:
             path = s.group()
             filename = path.split("/")[-1]
             filename_check(filename)
-            new_s = '<a href="./pdfjs-2.7.570-dist/web/viewer.html?file=/{}">{}</a>'.format(path, filename)
+            new_s = '<a href="./lib/pdfjs/web/viewer.html?file=/{}">{}</a>'.format(path, filename)
             rss_items.append((path, filename))
             line = line.replace(path, new_s)
             index_file_line.append(line + '</br>')
