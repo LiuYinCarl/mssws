@@ -13,7 +13,7 @@ function f_get_pids() {
     return 0
 }
 
-function f_check_root_rights() {    
+function f_check_root_rights() {
     if (( ${EUID} != 0 )); then
 	echo "Please run as root to make sure mssws can bind success."
 	exit
@@ -27,13 +27,13 @@ function f_run_program() {
 	echo "${exec_name} don't exist, please run `bash run.sh compile` first."
 	exit
     fi
-    
+
     f_get_pids
     for p in ${g_pids}; do
 	echo "kill ${exec_name} [ ${p} ]."
 	kill ${p}
     done
-    
+
     echo "start run ${exec_name} ..."
     nohup ./${exec_name} &>/dev/null &
 

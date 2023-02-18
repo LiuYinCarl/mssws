@@ -87,7 +87,7 @@ with open("temp.file", "r") as f:
             line = line.replace(path, new_s)
             index_file_line.append(line + '</br>')
             continue
-        
+
         s = re.search("\\./.*?\\.pdf$", line, re.I)
         if s:
             path = s.group()

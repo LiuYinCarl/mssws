@@ -63,15 +63,16 @@ type Index struct {
 }
 
 
-
-var conf config
-var confPath = "./config.json"
-var indexTemplatePath = "./index_template.html"
-var articleTemplatePath = "./article_template.html"
-var queryTemplatePath = "./query_template.html"
-var is_head = true
-var query_file = "query.data"
-var admin_script = "./admin.sh"
+var (
+	conf config
+	is_head				= true
+	confPath			= "./config.json"
+	indexTemplatePath	= "./index_template.html"
+	articleTemplatePath = "./article_template.html"
+	queryTemplatePath	= "./query_template.html"
+	query_file			= "query.data"
+	admin_script		= "./admin.sh"
+)
 
 // 加载 json 配置
 func loadConfig() bool {
@@ -87,9 +88,9 @@ func loadConfig() bool {
 		return false
 	}
 
-	conf.TexmeCDNLink = conf.SiteLink + conf.TexmeCDNLink
-	conf.HighlightCDNLink = conf.SiteLink + conf.HighlightCDNLink
-	conf.HighlightThemeCDNLink = conf.SiteLink + conf.HighlightThemeCDNLink
+	conf.TexmeCDNLink			= conf.SiteLink + conf.TexmeCDNLink
+	conf.HighlightCDNLink		= conf.SiteLink + conf.HighlightCDNLink
+	conf.HighlightThemeCDNLink	= conf.SiteLink + conf.HighlightThemeCDNLink
 
 	return true
 }
@@ -160,14 +161,12 @@ func GetContentType(suffix string) string {
 		return "image/svg+xml"
 	case "ttf":
 		return "application/x-font-truetype"
-	case "woff":
-	case "woff2":
+	case "woff", "woff2":
 		return "application/x-font-woff"
 	default:
 		return "text/html;charset=utf-8"
 	}
-	// not used, but Golang want me add it.
-	return "text/html;charset=utf-8"
+	// return "text/html;charset=utf-8"
 }
 
 func TransLine(line string) string {
@@ -176,15 +175,15 @@ func TransLine(line string) string {
 		if len(line) == 3 {
 			retLine := ""
 			if is_head {
-				retLine = "<pre><code class=\"\">"
+				retLine = `<pre><code class="">`
 			} else {
-				retLine = "</code></pre>"
+				retLine = `</code></pre>`
 			}
 			is_head = !is_head;
 			return retLine;
 		} else {
 			is_head = false
-			return fmt.Sprintf("<pre><code class=\"%s\">", line[3:])
+			return fmt.Sprintf(`<pre><code class="%s">`, line[3:])
 		}
 	}
 	return line
@@ -228,7 +227,7 @@ func admin(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("url decode error."))
 		return
 	}
-	
+
 	params := strings.Split(url, "/")
 	// remove first empty string
 	if params[0] == "" {
@@ -384,7 +383,7 @@ func indexPage(w http.ResponseWriter, r *http.Request) {
 		Content: string(content),
 		SiteLinks: conf.SiteLinks,
 	}
-	
+
 	temp.Execute(w, index)
 }
 
@@ -394,7 +393,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("url decode error."))
 		return
 	}
-	
+
 	if url == "/" || url == "" || strings.ToLower(url) == "/index.html" {
 		indexPage(w, r)
 		return
@@ -454,11 +453,11 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	loadConfig()
-	
+
 	if conf.OpenDirMonitor == "true" {
 		go dirMonitor()
 	}
-	
+
 	http.HandleFunc("/", index)
 	http.HandleFunc("/query", query)
 	http.HandleFunc("/admin/", admin)

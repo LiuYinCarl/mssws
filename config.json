@@ -1,36 +1,34 @@
 {
-    "SiteTitle" : "www.man6.org",
-    "SiteLink" : "http://127.0.0.1:8000",
-    "HomePageLink" : "/index.html",
-    "HomePageTitle" : "Home Page",
-    "FootPrint" : "",
-    "TexmeCDNLink" : "/lib/texme/texme.js",
-    "HighlightCDNLink" : "/lib/highlight/highlight.min.js",
-    "HighlightThemeCDNLink" : "/lib/highlight/styles/atom-one-dark.min.css",
-    "BlogDir" : "./blog",
-    "IP" : "127.0.0.1",
-    "Port" : "8000",
-    "OpenDirMonitor" : "true",
-    "MonitorScript" : "directory_monitor.sh",
-    "MonitorRefreshTick" : 10,
-
+    "SiteTitle"			: "www.man6.org",
+    "SiteLink"			: "http://127.0.0.1:8000",
+    "HomePageLink"		: "/index.html",
+    "HomePageTitle"		: "Home Page",
+    "FootPrint"			: "",
+    "TexmeCDNLink"		: "/lib/texme/texme.js",
+    "HighlightCDNLink"		: "/lib/highlight/highlight.min.js",
+    "HighlightThemeCDNLink"	: "/lib/highlight/styles/atom-one-dark.min.css",
+    "BlogDir"			: "./blog",
+    "IP"			: "127.0.0.1",
+    "Port"			: "8000",
+    "OpenDirMonitor"		: "true",
+    "MonitorScript"		: "directory_monitor.sh",
+    "MonitorRefreshTick"	: 10,
     "SiteLinks" : [
 	{
-	    "Title" : "文档",
-	    "Url" : "http://www.man6.org/doc.md"
+	    "Title"	: "文档",
+	    "Url"	: "http://www.man6.org/doc.md"
 	},
 	{
-	    "Title" : "Github",
-	    "Url" : "https://github.com/LiuYinCarl/mssws/"
+	    "Title"	: "Github",
+	    "Url"	: "https://github.com/LiuYinCarl/mssws/"
 	},
 	{
-	    "Title" : "RSS",
-	    "Url" : "http://www.man6.org/rss.xml"
+	    "Title"	: "RSS",
+	    "Url"	: "http://www.man6.org/rss.xml"
 	}
     ],
-
-    "RssTitle" : "Rss of man6.org",
-    "RssLink" : "http://www.man6.org/rss.xml",
-    "RssDesc" : "a blog about tech.",
-    "RssFile" : "rss.xml"
+    "RssTitle"	: "Rss of man6.org",
+    "RssLink"	: "http://www.man6.org/rss.xml",
+    "RssDesc"	: "a blog about tech.",
+    "RssFile"	: "rss.xml"
 }

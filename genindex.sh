@@ -1,5 +1,5 @@
 #!/bin/bash
- 
+
 tree ./blog -f -N -P "*.md|*.pdf" -I "*.assets" --prune --ignore-case > temp.file
 
 
