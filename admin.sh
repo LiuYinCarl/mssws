@@ -1,13 +1,13 @@
-# mssws admin script
-# visit url: your_mssws_site/admin to run this script
+#!/bin/bash
 
+# visit url: your_mssws_site/admin to run this script
 
 admin_password="your_password"
 blog_dir="./blog"
 log_file="admin.log"
 
 function update() {
-    cd ${blog_dir}
+    cd ${blog_dir} || exit
     git pull
 }
 
@@ -25,7 +25,7 @@ if [ ! -f ${log_file} ];then
 fi
 
 # the visit time
-now_date=`date`
+now_date=$(date)
 # the visit info
 visit_log=${now_date}" "$*
 echo ${visit_log} >> ${log_file}
