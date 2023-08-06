@@ -221,9 +221,16 @@ visit you_site_url/admin/ to manage your server, *set admin's password in admin.
 - texme
 - highlight.js
 - PDF.js
-
+- shellcheck
 
 ## changelog
+
+2023/03/05
+
+fix shellcheck warning and wrong
+
+修复 shellcheck 指出的警告和错误
+
 
 2020/12/16
 

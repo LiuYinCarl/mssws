@@ -9,7 +9,7 @@ admin_script="admin.sh"
 g_pids=()
 
 function f_get_pids() {
-    g_pids=`ps -ef | grep ${exec_name} | grep -v grep | grep -v PPID | awk '{print $2}'`
+    g_pids=$(pgrep ${exec_name})
     return 0
 }
 
@@ -24,12 +24,12 @@ function f_run_program() {
     f_check_root_rights
 
     if [ ! -f ${exec_name} ]; then
-	echo "${exec_name} don't exist, please run `bash run.sh compile` first."
+	echo "${exec_name} don't exist, please run 'bash run.sh compile' first."
 	exit
     fi
 
     f_get_pids
-    for p in ${g_pids}; do
+    for p in "${g_pids[@]}"; do
 	echo "kill ${exec_name} [ ${p} ]."
 	kill ${p}
     done
@@ -38,7 +38,7 @@ function f_run_program() {
     nohup ./${exec_name} &>/dev/null &
 
     f_get_pids
-    for p in ${g_pids}; do
+    for p in "${g_pids[@]}"; do
 	echo "run ${exec_name} [ ${p} ] success ..."
 	return
     done
@@ -77,7 +77,7 @@ if [ $1 == "help" ]; then
 
 elif [ $1 = "kill" ]; then
     f_get_pids
-    for p in ${g_pids}; do
+    for p in "${g_pids[@]}"; do
 	echo "kill ${exec_name} [ ${p} ]"
 	kill ${p}
     done
@@ -90,6 +90,6 @@ elif [ $1 = "restart" ]; then
     f_run_program
 
 else
-    echo "wrong argument. run `bash run.sh help` to get more info"
+    echo "wrong argument. run 'bash run.sh help' to get more info"
 fi
 
