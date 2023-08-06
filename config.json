@@ -5,8 +5,6 @@
     "HomePageTitle"		: "Home Page",
     "FootPrint"			: "",
     "TexmeCDNLink"		: "/lib/texme/texme.js",
-    "HighlightCDNLink"		: "/lib/highlight/highlight.min.js",
-    "HighlightThemeCDNLink"	: "/lib/highlight/styles/atom-one-dark.min.css",
     "BlogDir"			: "./blog",
     "IP"			: "127.0.0.1",
     "Port"			: "8000",

@@ -1,12 +1,5 @@
 <!DOCTYPE html>
 
-<head>
-  <meta charset="UTF-8">
-  <title>{{ .SiteTitle }}</title>
-  <script src="{{ .TexmeCDNLink }}"></script>
-  <link rel="shortcut icon" href="favicon.ico" />
-</head>
-
 <script>window.texme = { style: 'none', useMathJax: false, protectMath: false }</script>
 <style>
   @media screen and (min-width: 40em) {
@@ -58,6 +51,14 @@
       }
   }
 </style>
+
+<head>
+  <meta charset="UTF-8">
+  <title>{{ .SiteTitle }}</title>
+  <script src="{{ .TexmeCDNLink }}"></script>
+  <link rel="shortcut icon" href="favicon.ico" />
+</head>
+
   <div>{{ range .SiteLinks }}<a href="{{ .Url }}">{{ .Title }} </a>{{ end }}</div>
   <hr>
   <form action="./query" method="POST">

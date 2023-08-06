@@ -30,8 +30,6 @@ type config struct {
 	HomePageTitle         string `json:"HomePageTitle"`
 	FootPrint             string `json:"FootPrint"`
 	TexmeCDNLink          string `json:"TexmeCDNLink"`
-	HighlightCDNLink      string `json:"HighlightCDNLink"`
-	HighlightThemeCDNLink string `json:"HighlightThemeCDNLink"`
 	BlogDir               string `json:"BlogDir"`
 	IP                    string `json:"IP"`
 	Port                  string `json:"Port"`
@@ -47,8 +45,6 @@ type Article struct {
 	HomePageTitle         string
 	FootPrint             string
 	TexmeCDNLink          string
-	HighlightCDNLink      string
-	HighlightThemeCDNLink string
 	Content               string
 }
 
@@ -56,8 +52,6 @@ type Index struct {
 	SiteTitle string
 	FootPrint string
 	TexmeCDNLink string
-	HighlightCDNLink string
-	HighlightThemeCDNLink string
 	Content string
 	SiteLinks []SiteLink
 }
@@ -89,9 +83,6 @@ func loadConfig() bool {
 	}
 
 	conf.TexmeCDNLink			= conf.SiteLink + conf.TexmeCDNLink
-	conf.HighlightCDNLink		= conf.SiteLink + conf.HighlightCDNLink
-	conf.HighlightThemeCDNLink	= conf.SiteLink + conf.HighlightThemeCDNLink
-
 	return true
 }
 
@@ -167,58 +158,6 @@ func GetContentType(suffix string) string {
 		return "text/html;charset=utf-8"
 	}
 	// return "text/html;charset=utf-8"
-}
-
-func TransLine(line string) string {
-	if pos := strings.Index(line, "```"); pos != -1 {
-		line := strings.TrimSpace(line)
-		if len(line) == 3 {
-			retLine := ""
-			if is_head {
-				retLine = `<pre><code class="">`
-			} else {
-				retLine = `</code></pre>`
-			}
-			is_head = !is_head;
-			return retLine;
-		} else {
-			is_head = false
-			return fmt.Sprintf(`<pre><code class="%s">`, line[3:])
-		}
-	}
-	return line
-}
-
-func Md2html(file_path string) []byte {
-	var new_lines []string
-
-	new_lines = append(new_lines, "\\begin{md}\n")
-
-	md_file, err := os.Open(file_path)
-	if err != nil {
-		return []byte("internal error")
-	}
-	defer md_file.Close()
-
-	br := bufio.NewReader(md_file)
-	for {
-		line, _, c := br.ReadLine()
-		if c == io.EOF {
-			break
-		}
-
-		l := TransLine(string(line)) + "\n"
-		new_lines = append(new_lines, l)
-	}
-
-	new_lines = append(new_lines, "\\end{md}\n")
-
-	var buffer bytes.Buffer
-	for _, s := range new_lines {
-		buffer.WriteString(s)
-	}
-
-	return buffer.Bytes()
 }
 
 func admin(w http.ResponseWriter, r *http.Request) {
@@ -351,8 +290,6 @@ func query(w http.ResponseWriter, r *http.Request) {
 		HomePageTitle:         conf.HomePageTitle,
 		FootPrint:             "",
 		TexmeCDNLink:          conf.TexmeCDNLink,
-		HighlightCDNLink:      conf.HighlightCDNLink,
-		HighlightThemeCDNLink: conf.HighlightThemeCDNLink,
 		Content:               buffer.String(),
 	}
 	temp.Execute(w, article)
@@ -378,8 +315,6 @@ func indexPage(w http.ResponseWriter, r *http.Request) {
 		SiteTitle: conf.SiteTitle,
 		FootPrint: conf.FootPrint,
 		TexmeCDNLink: conf.TexmeCDNLink,
-		HighlightCDNLink: conf.HighlightCDNLink,
-		HighlightThemeCDNLink: conf.HighlightThemeCDNLink,
 		Content: string(content),
 		SiteLinks: conf.SiteLinks,
 	}
@@ -425,7 +360,8 @@ func index(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		content := Md2html(filePath)
+		// content := Md2html(filePath)
+		content, err := ioutil.ReadFile(filePath)
 		articleName := path.Base(filePath)
 
 		article := Article{
@@ -434,8 +370,6 @@ func index(w http.ResponseWriter, r *http.Request) {
 			HomePageTitle:         conf.HomePageTitle,
 			FootPrint:             conf.FootPrint,
 			TexmeCDNLink:          conf.TexmeCDNLink,
-			HighlightCDNLink:      conf.HighlightCDNLink,
-			HighlightThemeCDNLink: conf.HighlightThemeCDNLink,
 			Content:               string(content),
 		}
 

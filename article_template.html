@@ -6,7 +6,7 @@
 	  background-color: #696969;
       }
       main {
-	  padding: 5em 6em;
+	  padding: 2em 5em;
 	  margin: 1em auto;
 	  box-shadow: 0.4em 0.4em 0.4em #222;
 	  max-width: 50em;
@@ -55,20 +55,14 @@
   <meta charset="UTF-8">
   <title>{{ .SiteTitle }}</title>
   <script src="{{ .TexmeCDNLink }}"></script>
-  <link href="{{ .HighlightThemeCDNLink }}" rel="stylesheet" />
-  <script src="{{ .HighlightCDNLink }}"></script>
-  <script >
-    document.addEventListener('DOMContentLoaded', function() {
-      hljs.initHighlightingOnLoad();
-    });
-</script>
 </head>
 
 <body>
+  <textarea>
   <a href= {{ .HomePageLink }} > {{ .HomePageTitle }} </a>
 
   {{ .Content }}
-
+</textarea>
     </hr>
     {{ .FootPrint }}
 </body>
