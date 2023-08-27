@@ -14,14 +14,14 @@ monitorDir=(
 # generate monitor directory's md5 if there is no md5old.log
 OldFile () {
     for dir in "${monitorDir[@]}"; do
-	/bin/find ${dir} -type f | xargs md5sum >> ${md5Dir}/md5old.log
+	/bin/find "${dir}" -type f | xargs md5sum >> ${md5Dir}/md5old.log
     done
 }
 
 # generate monitor dirctory's md5 every we run the script
 NewFile () {
     for dir in "${monitorDir[@]}"; do
-	/bin/find ${dir} -type f | xargs md5sum >> ${md5Dir}/md5new.log
+	/bin/find "${dir}" -type f | xargs md5sum >> ${md5Dir}/md5new.log
     done
 }
 

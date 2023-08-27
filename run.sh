@@ -9,12 +9,12 @@ admin_script="admin.sh"
 g_pids=()
 
 function f_get_pids() {
-    g_pids=$(pgrep ${exec_name})
+    g_pids=$( pgrep "${exec_name}" )
     return 0
 }
 
 function f_check_root_rights() {
-    if (( ${EUID} != 0 )); then
+    if (( EUID != 0 )); then
 	echo "Please run as root to make sure mssws can bind success."
 	exit
     fi
@@ -31,7 +31,7 @@ function f_run_program() {
     f_get_pids
     for p in "${g_pids[@]}"; do
 	echo "kill ${exec_name} [ ${p} ]."
-	kill ${p}
+	kill "${p}"
     done
 
     echo "start run ${exec_name} ..."
@@ -67,7 +67,7 @@ if [ $# = 0 ]; then
     exit
 fi
 
-if [ $1 == "help" ]; then
+if [ "$1" == "help" ]; then
     echo "run.sh Usage"
     echo "./run.sh help         show run.sh help"
     echo "./run.sh kill         kill ${exec_name}"
@@ -75,18 +75,18 @@ if [ $1 == "help" ]; then
     echo "./run.sh restart      kill and restart ${exec_name}"
     echo "./run.sh              compile ${exec_name} and restart ${exec_name}"
 
-elif [ $1 = "kill" ]; then
+elif [ "$1" = "kill" ]; then
     f_get_pids
     for p in "${g_pids[@]}"; do
 	echo "kill ${exec_name} [ ${p} ]"
-	kill ${p}
+	kill "${p}"
     done
 
-elif [ $1 = "compile" ]; then
+elif [ "$1" = "compile" ]; then
     echo "compile ${exec_name} ..."
     go build -o ${exec_name} ${go_src}
 
-elif [ $1 = "restart" ]; then
+elif [ "$1" = "restart" ]; then
     f_run_program
 
 else

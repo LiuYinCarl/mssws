@@ -2,7 +2,7 @@
 
 # visit url: your_mssws_site/admin to run this script
 
-admin_password="your_password"
+admin_password="your_passowrd"
 blog_dir="./blog"
 log_file="admin.log"
 
@@ -28,17 +28,17 @@ fi
 now_date=$(date)
 # the visit info
 visit_log=${now_date}" "$*
-echo ${visit_log} >> ${log_file}
+echo "${visit_log}" >> ${log_file}
 
 
-if [ ! $1 == ${admin_password} ]; then
+if [ ! "$1" == ${admin_password} ]; then
     echo "wrong password"
     usage
     exit 0
 fi
 
 if [ $# -eq 2 ]; then
-    if [ $2 == "update" ]; then
+    if [ "$2" == "update" ]; then
         update
     else
         usage
