@@ -1,57 +1,6 @@
 <!DOCTYPE html>
-
 <script>window.texme = { style: 'none', useMathJax: false, protectMath: false }</script>
-<style>
-  @media screen and (min-width: 40em) {
-      body {
-	  background-color: #696969;
-      }
-      main {
-	  padding: 2em 5em;
-	  margin: 1em auto;
-	  box-shadow: 0.4em 0.4em 0.4em #222;
-	  max-width: 50em;
-	  background-color: #fffff9;
-      }
-      h1, h2, h3, h4, h5, h6, h7 {
-	  margin: 1em 0 0.5em 0;
-	  line-height: 1.2;   
-      }
-      img {
-	  max-width: 100%;
-      }
-      pre, code, samp, kbd {
-	  color: #009;
-	  font-family: monospace,monospace;
-      }
-      pre, blockquote {
-	  background: #eee;
-	  padding: 0.5em;
-      }
-      pre {
-	  overflow: auto;
-      }
-      blockquote {
-	  border-left: medium solid #ccc;
-	  margin: 1em 0;
-      }
-      blockquote :first-child {
-	  margin-top: 0;
-      }
-      blockquote :last-child {
-	  margin-bottom: 0;
-      }
-      table {
-	  border-collapse: collapse;
-      }
-      th, td {
-	  border: thin solid #999;
-	  padding: 0.3em 0.4em;
-	  text-align: left;
-      }
-  }
-</style>
-
+{{ template "style.tmpl" }}
 <head>
   <meta charset="UTF-8">
   <title>Query Result</title>

@@ -64,6 +64,7 @@ var (
 	indexTemplatePath	= "./index_template.html"
 	articleTemplatePath = "./article_template.html"
 	queryTemplatePath	= "./query_template.html"
+	styleTemplatePath   = "./style.tmpl"
 	query_file			= "query.data"
 	admin_script		= "./admin.sh"
 )
@@ -278,7 +279,7 @@ func query(w http.ResponseWriter, r *http.Request) {
 		buffer.WriteString(s)
 	}
 
-	temp, err := template.ParseFiles(queryTemplatePath)
+	temp, err := template.ParseFiles(queryTemplatePath, styleTemplatePath)
 	if err != nil {
 		w.Write([]byte("load query template file failed."))
 		return
@@ -305,7 +306,7 @@ func indexPage(w http.ResponseWriter, r *http.Request) {
 	content_type := GetContentType("html")
 	w.Header().Set("Content-Type", content_type)
 
-	temp, err := template.ParseFiles(indexTemplatePath)
+	temp, err := template.ParseFiles(indexTemplatePath, styleTemplatePath)
 	if err != nil {
 		w.Write([]byte("load index template file failed."))
 		return
@@ -354,7 +355,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 	// markdown file
 	if filePath[len(filePath)-3:] == ".md" {
-		temp, err := template.ParseFiles(articleTemplatePath)
+		temp, err := template.ParseFiles(articleTemplatePath, styleTemplatePath)
 		if err != nil {
 			w.Write([]byte("load article template file failed."))
 			return
