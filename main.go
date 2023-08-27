@@ -61,10 +61,10 @@ var (
 	conf config
 	is_head				= true
 	confPath			= "./config.json"
-	indexTemplatePath	= "./index_template.html"
-	articleTemplatePath = "./article_template.html"
-	queryTemplatePath	= "./query_template.html"
-	styleTemplatePath   = "./style.tmpl"
+	indexTemplatePath	= "./tmpl/index.tmpl"
+	articleTemplatePath = "./tmpl/article.tmpl"
+	queryTemplatePath	= "./tmpl/query.tmpl"
+	styleTemplatePath   = "./tmpl/style.tmpl"
 	query_file			= "query.data"
 	admin_script		= "./admin.sh"
 )
