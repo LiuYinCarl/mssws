@@ -49,100 +49,6 @@ If you want to see more info about how to run the program, run `./run.sh help`
 如果想知道更多关于程序的信息，请执行命令 `./run.sh help`
 
 
-## 项目结构|Project structure
-
-``` bash
-
-├── LICENSE
-├── README.md
-├── article_template.html
-├── blog   # default blog directory
-├── config.json
-├── directory_monitor.sh
-├── genindex.py  # generate index.data, called by genindex.sh
-├── genindex.sh  # update index.data, will auto run if you use default config
-├── image
-├── index.data   # save your blog directory's `tree` command output
-├── index_template.html
-├── main.go      # main logic
-├── pdfjs-2.7.570-dist  # pdfjs lib
-├── query.data   # save all files which suppport full text search
-├── query_template.html
-└── run.sh       # run the server and more operations 
-
-```
-
-## config
-
-``` json
-{
-    "SiteTitle" : "www.bearcarl.top",
-    "HomePageLink" : "/index.html",
-    "HomePageTitle" : "Home Page",
-    "FootPrint" : "",
-    "TexmeCDNLink" : "https://cdn.jsdelivr.net/npm/texme@1.0.0",
-    "HighlightCDNLink" : "https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js",
-    "HighlightThemeCDNLink" : "https://cdn.bootcss.com/highlight.js/9.12.0/styles/atom-one-dark.min.css",
-    // don't change the BlogDir, this version change the BlogDir will cause a bug
-	"BlogDir" : "./blog",
-    "IP" : "0.0.0.0",
-    "Port" : "80",
-    "OpenDirMonitor" : "true",
-    "MonitorScript" : "directory_monitor.sh",
-    "MonitorRefreshTick" : 10,
-
-    // the first line of index page, you can save some other website's link
-    "SiteLinks" : [
-	{
-	    "Title": "文档",
-	    "Url" : "http://www.bearcarl.top/doc.html"
-	},
-	{
-	    "Title" : "Github",
-	    "Url" : "https://github.com/LiuYinCarl/mssws/"
-	}
-    ]
-}
-
-```
-
-## 配置
-
-``` json
-{
-    "SiteTitle" : "www.bearcarl.top",
-    "HomePageLink" : "/index.html",
-    "HomePageTitle" : "Home Page",
-    // 页面最下面一行 可以用来放置备案号等信息
-    "FootPrint" : "",
-    "TexmeCDNLink" : "https://cdn.jsdelivr.net/npm/texme@1.0.0",
-    "HighlightCDNLink" : "https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js",
-    "HighlightThemeCDNLink" : "https://cdn.bootcss.com/highlight.js/9.12.0/styles/atom-one-dark.min.css",
-    // 请不要修改 BlogDir 配置，该版本尚不支持，强行修改会产生bug
-	"BlogDir" : "./blog",
-    "IP" : "0.0.0.0",
-    "Port" : "80",
-    // 是否开启文件夹监控，在博客文件夹更新后可以迅速更新主页
-    "OpenDirMonitor" : "true",
-    // 文件夹监控脚本
-    "MonitorScript" : "directory_monitor.sh",
-    // 文件夹监控间隔时间
-    "MonitorRefreshTick" : 10,
-    // 主页的最上面一行，用来放置链接
-    "SiteLinks" : [
-	{
-	    "Title": "文档",
-	    "Url" : "http://www.bearcarl.top/doc.html"
-	},
-	{
-	    "Title" : "Github",
-	    "Url" : "https://github.com/LiuYinCarl/mssws/"
-	}
-    ]
-}
-
-```
-
 ## 示例|Example
 
 [示例站点|Example site](http://www.man6.org/)
@@ -215,21 +121,13 @@ visit you_site_url/admin/ to manage your server, *set admin's password in admin.
 
 
 
-
 ## 使用的工具或者库 | Used tool or library
 
 - texme
-- highlight.js
 - PDF.js
 - shellcheck
 
 ## changelog
-
-2023/03/05
-
-fix shellcheck warning and wrong
-
-修复 shellcheck 指出的警告和错误
 
 
 2020/12/16
@@ -299,4 +197,15 @@ To achieve zero dependence on external resources, add all need JS, CSS resource 
 
 为了实现对对外部资源的零依赖，将本项目需要的所有 JS CSS 资源都添加到了项目中
 
+2023/03/05
+
+fix shellcheck warning and wrong
+
+修复 shellcheck 指出的警告和错误
+
+2023/08/31
+
+update libs, configuration, codes, remove code highlight
+
+更新了依赖库，配置和代码, 删除了代码高亮
 
