@@ -19,15 +19,15 @@ git clone --depth=1 https://github.com/susam/texme.git
 git clone --depth=1 https://github.com/markedjs/marked.git
 git clone --depth=1 https://github.com/mathjax/mathjax.git
 
-cd ./mathjax
+cd ./mathjax || exit
 rm -rf .git
 cd ..
 
-cd ./marked
+cd ./marked || exit
 rm -rf .git
 cd ..
 
-cd texme
+cd texme || exit
 rm -rf .git
 cd ..
 
