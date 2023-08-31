@@ -181,8 +181,7 @@
     "example": 23,
     "start_line": 605,
     "end_line": 611,
-    "section": "Backslash escapes",
-    "shouldFail": true
+    "section": "Backslash escapes"
   },
   {
     "markdown": "``` foo\\+bar\nfoo\n```\n",
@@ -190,8 +189,7 @@
     "example": 24,
     "start_line": 614,
     "end_line": 621,
-    "section": "Backslash escapes",
-    "shouldFail": true
+    "section": "Backslash escapes"
   },
   {
     "markdown": "&nbsp; &amp; &copy; &AElig; &Dcaron;\n&frac34; &HilbertSpace; &DifferentialD;\n&ClockwiseContourIntegral; &ngE;\n",
@@ -223,8 +221,7 @@
     "example": 28,
     "start_line": 691,
     "end_line": 701,
-    "section": "Entity and numeric character references",
-    "shouldFail": true
+    "section": "Entity and numeric character references"
   },
   {
     "markdown": "&copy\n",
@@ -274,8 +271,7 @@
     "example": 34,
     "start_line": 752,
     "end_line": 759,
-    "section": "Entity and numeric character references",
-    "shouldFail": true
+    "section": "Entity and numeric character references"
   },
   {
     "markdown": "`f&ouml;&ouml;`\n",
@@ -651,8 +647,7 @@
     "example": 81,
     "start_line": 1365,
     "end_line": 1372,
-    "section": "Setext headings",
-    "shouldFail": true
+    "section": "Setext headings"
   },
   {
     "markdown": "  Foo *bar\nbaz*\t\n====\n",
@@ -660,8 +655,7 @@
     "example": 82,
     "start_line": 1379,
     "end_line": 1386,
-    "section": "Setext headings",
-    "shouldFail": true
+    "section": "Setext headings"
   },
   {
     "markdown": "Foo\n-------------------------\n\nFoo\n=\n",
@@ -749,7 +743,8 @@
     "example": 93,
     "start_line": 1531,
     "end_line": 1541,
-    "section": "Setext headings"
+    "section": "Setext headings",
+    "shouldFail": true
   },
   {
     "markdown": "- Foo\n---\n",
@@ -765,8 +760,7 @@
     "example": 95,
     "start_line": 1559,
     "end_line": 1566,
-    "section": "Setext headings",
-    "shouldFail": true
+    "section": "Setext headings"
   },
   {
     "markdown": "---\nFoo\n---\nBar\n---\nBaz\n",
@@ -1566,8 +1560,7 @@
     "example": 195,
     "start_line": 3212,
     "end_line": 3220,
-    "section": "Link reference definitions",
-    "shouldFail": true
+    "section": "Link reference definitions"
   },
   {
     "markdown": "[foo]: /url '\ntitle\nline1\nline2\n'\n\n[foo]\n",
@@ -1607,8 +1600,7 @@
     "example": 200,
     "start_line": 3283,
     "end_line": 3289,
-    "section": "Link reference definitions",
-    "shouldFail": true
+    "section": "Link reference definitions"
   },
   {
     "markdown": "[foo]: <bar>(baz)\n\n[foo]\n",
@@ -1624,8 +1616,7 @@
     "example": 202,
     "start_line": 3307,
     "end_line": 3313,
-    "section": "Link reference definitions",
-    "shouldFail": true
+    "section": "Link reference definitions"
   },
   {
     "markdown": "[foo]\n\n[foo]: url\n",

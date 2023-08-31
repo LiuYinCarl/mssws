@@ -5,41 +5,70 @@ on:
     branches:
       - master
 
+permissions:
+  contents: read
+
 jobs:
   Test:
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     strategy:
       matrix:
         # lowest verison here should also be in `engines` field
-        node_version: [12, 'lts/*', 'node']
+        node_version: [16, 18, 'lts/*', '*']
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
       - name: Install Node
-        uses: dcodeIO/setup-node-nvm@master
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node_version }}
+          check-latest: true
       - name: Install Dependencies
         run: npm ci
       - name: Run Unit Tests 👩🏽‍💻
         run: npm run test:unit
       - name: Run Spec Tests 👩🏽‍💻
         run: npm run test:specs
+      - name: Run UMD Tests 👩🏽‍💻
+        run: npm run test:umd
+      - name: Run Types Tests 👩🏽‍💻
+        run: npm run test:types
 
   Lint:
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+      - name: Install Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 'lts/*'
       - name: Install Dependencies
         run: npm ci
       - name: Lint ✨
         run: npm run test:lint
 
+  Build:
+    name: Build and Test Types
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: Install Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 'lts/*'
+      - name: Install Dependencies
+        run: npm ci
+      - name: Build 🗜️
+        run: npm run build
+      - name: Run Types Tests 👩🏽‍💻
+        run: npm run test:types
+
   Release:
-    needs: [Test, Lint]
+    permissions:
+      contents: write
+    needs: [Test, Lint, Build]
     if: |
       github.ref == 'refs/heads/master' &&
       github.event.repository.fork == false
@@ -48,30 +77,26 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
       - name: Install Node
-        uses: dcodeIO/setup-node-nvm@master
+        uses: actions/setup-node@v3
         with:
           node-version: 'lts/*'
       - name: Install Dependencies
         run: npm ci
       - name: Build 🗜️
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
+          export SEMANTIC_RELEASE_NEXT_VERSION=$(npx semantic-release --no-ci --dry-run | grep -oP 'The next release version is \K[0-9]+\.[0-9]+\.[0-9]+')
+          echo "Next Version: $SEMANTIC_RELEASE_NEXT_VERSION"
           npm run build
           if ! git diff --quiet; then
             git config --global user.email "<>"
             git config --global user.name "MarkedJS bot"
-            git commit -am "🗜️ build [skip ci]"
+            git commit -am "🗜️ build v$SEMANTIC_RELEASE_NEXT_VERSION [skip ci]"
           fi
       - name: Release 🎉
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npx semantic-release
-
-  Skip:
-    permissions:
-      contents: none
-    if: contains(github.event.head_commit.message, '[skip ci]')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Skip CI 🚫
-        run: echo skip ci

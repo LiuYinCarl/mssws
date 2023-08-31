@@ -35,7 +35,7 @@ function f_run_program() {
     done
 
     echo "start run ${exec_name} ..."
-    nohup ./${exec_name} &>/dev/null &
+    nohup ./${exec_name} &>server.log &
 
     f_get_pids
     for p in "${g_pids[@]}"; do

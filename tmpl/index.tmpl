@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<script>window.texme = { style: 'none', useMathJax: false, protectMath: false }</script>
 {{ template "style.tmpl" }}
+
 <head>
   <meta charset="UTF-8">
   <title>{{ .SiteTitle }}</title>
-  <script src="{{ .TexmeCDNLink }}"></script>
   <link rel="shortcut icon" href="favicon.ico" />
 </head>
 
+<body>
   <div>{{ range .SiteLinks }}<a href="{{ .Url }}">{{ .Title }} </a>{{ end }}</div>
   <hr>
   <form action="./query" method="POST">
@@ -19,3 +19,6 @@
   {{ .Content }}
   <hr>
   {{ .FootPrint }}
+</body>
+
+</html>

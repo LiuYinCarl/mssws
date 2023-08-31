@@ -9,6 +9,7 @@ Markdown + LaTeX documents.
 [![JSDelivr Hits][JSDelivr SVG]][JSDelivr URL]
 [![MIT License][License SVG]][L]
 [![Twitter][Twitter SVG]][Twitter URL]
+[![Mastodon][Mastodon SVG]][Mastodon URL]
 
 [Demo SVG]: https://img.shields.io/badge/view-demo-brightgreen
 [Demo URL]: https://susam.github.io/texme/
@@ -17,8 +18,10 @@ Markdown + LaTeX documents.
 [License SVG]: https://img.shields.io/badge/license-MIT-%233ea639
 [JSDelivr SVG]: https://data.jsdelivr.com/v1/package/npm/texme/badge?style=rounded
 [JSDelivr URL]: https://www.jsdelivr.com/package/npm/texme
-[Twitter SVG]: https://img.shields.io/badge/twitter-%40susam-%231da1f2
+[Twitter SVG]: https://img.shields.io/badge/twitter-%40susam-%231d9bf0
 [Twitter URL]: https://twitter.com/susam
+[Mastodon SVG]: https://img.shields.io/badge/mastodon-%40susam-%236364ff
+[Mastodon URL]: https://mastodon.social/@susam
 
 
 Contents
@@ -36,6 +39,7 @@ Contents
 * [Use TeXMe as a Library](#use-texme-as-a-library)
   * [Install TeXMe](#install-texme)
   * [Render Markdown and LaTeX](#render-markdown-and-latex)
+* [TeXMe API Documentation](#texme-api-documentation)
 * [Configuration Options](#configuration-options)
 * [Self-Hosting TeXMe](#self-hosting-texme)
 * [Markdown Priority Environment](#markdown-priority-environment)
@@ -45,6 +49,8 @@ Contents
   * [Unlimited Variants](#unlimited-variants)
 * [License](#license)
 * [Support](#support)
+* [Channels](#channels)
+* [More](#more)
 
 
 Get Started
@@ -54,7 +60,7 @@ Copy and paste the code below into an HTML file with `.html` as the
 extension name:
 
 ```html
-<!DOCTYPE html><script src="https://cdn.jsdelivr.net/npm/texme@1.1.0"></script><textarea>
+<!DOCTYPE html><script src="https://cdn.jsdelivr.net/npm/texme@1.2.2"></script><textarea>
 
 # Euler's Identity
 
@@ -107,11 +113,11 @@ Body](#content-in-body) section for more details about it.
 CDN URLs
 --------
 
-Use the following URL in the `<script>` tag to load version 1.2.0 (the
+Use the following URL in the `<script>` tag to load version 1.2.2 (the
 current version at this time) of TeXMe:
 
 ```
-https://cdn.jsdelivr.net/npm/texme@1.2.0
+https://cdn.jsdelivr.net/npm/texme@1.2.2
 ```
 
 Use the following URL in the `<script>` tag to always load the latest
@@ -145,7 +151,7 @@ complete and valid HTML5 example:
 <!DOCTYPE html>
 <html lang="en">
 <title>Notes on Euler's Identity</title>
-<script src="https://cdn.jsdelivr.net/npm/texme@1.2.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/texme@1.2.2"></script>
 <textarea>
 
 # Euler's Identity
@@ -199,7 +205,7 @@ an example:
 ```html
 <!DOCTYPE html>
 <script>window.texme = { style: 'plain' }</script>
-<script src="https://cdn.jsdelivr.net/npm/texme@1.2.0"></script><textarea>
+<script src="https://cdn.jsdelivr.net/npm/texme@1.2.2"></script><textarea>
 
 # Euler's Identity
 
@@ -224,7 +230,7 @@ regular CSS code. Here is an example:
 ```html
 <!DOCTYPE html>
 <script>window.texme = { style: 'none' }</script>
-<script src="https://cdn.jsdelivr.net/npm/texme@1.2.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/texme@1.2.2"></script>
 <style>
 body {
   background: lightcyan;
@@ -267,7 +273,7 @@ set `useMathJax` and `protectMath` options to `false`:
 ```html
 <!DOCTYPE html>
 <script>window.texme = { useMathJax: false, protectMath: false }</script>
-<script src="https://cdn.jsdelivr.net/npm/texme@1.2.0"></script><textarea>
+<script src="https://cdn.jsdelivr.net/npm/texme@1.2.2"></script><textarea>
 
 # Atomic Theory
 
@@ -293,7 +299,7 @@ invokes rendering later on the click of a button by using the
 ```html
 <!DOCTYPE html>
 <script>window.texme = { renderOnLoad: false }</script>
-<script src="https://cdn.jsdelivr.net/npm/texme@1.2.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/texme@1.2.2"></script>
 <script>
 window.onload = function () {
   var button = document.getElementById('button')
@@ -345,7 +351,7 @@ style to `'plain'` using this function:
 ```html
 <!DOCTYPE html>
 <script>window.texme = { renderOnLoad: false }</script>
-<script src="https://cdn.jsdelivr.net/npm/texme@1.2.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/texme@1.2.2"></script>
 <script>
 window.onload = function () {
   var button = document.getElementById('button')
@@ -395,7 +401,7 @@ Euler's identity is a special case of Euler's formula from complex
 analysis, which states that for any real number $ x $,
 $$ e^{ix} = \cos x + i \sin x. $$
 
-<script src="https://cdn.jsdelivr.net/npm/texme@1.2.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/texme@1.2.2"></script>
 ```
 
 Here is the output:
@@ -423,7 +429,7 @@ Here is some unusual code:
 print('unusual <string')
 ```
 
-<script src="https://cdn.jsdelivr.net/npm/texme@1.2.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/texme@1.2.2"></script>
 ````
 
 Here is the broken output:
@@ -435,7 +441,7 @@ ends up being parsed as an HTML tag by the browser that looks like this:
 
 
 ````html
-<string') ```="" <script="" src="https://cdn.jsdelivr.net/npm/texme@1.2.0">
+<string') ```="" <script="" src="https://cdn.jsdelivr.net/npm/texme@1.2.2">
 ````
 
 This mangled form of the input is then rendered leading to unexpected
@@ -444,7 +450,7 @@ results. To resolve this, put the content within a `<textarea>` element
 input is fine because the content is put inside a `<textarea>` element.
 
 ````html
-<!DOCTYPE html><script src="https://cdn.jsdelivr.net/npm/texme@1.2.0"></script><textarea>
+<!DOCTYPE html><script src="https://cdn.jsdelivr.net/npm/texme@1.2.2"></script><textarea>
 
 Here is some unusual code:
 
@@ -498,6 +504,18 @@ The above example produces the following output:
 ```html
 <p><strong>Foo</strong> $$ {a}_{1} {a}_{2} $$</p>
 ```
+
+
+TeXMe API Documentation
+-----------------------
+
+The previous two sections introduced a few TeXMe API functions such as
+`texme.render()`, `texme.renderPage()`, and `texme.setOptions()`.
+TeXMe exposes several more functions that could be useful to invoke
+parts of TeXMe's rendering operations in your code. Visit [TeXMe module
+documentation][API Doc] to see the documentation of TeXMe API.
+
+[API Doc]: https://susam.github.io/texme/doc/module-texme.html
 
 
 Configuration Options
@@ -554,54 +572,57 @@ Here is a quick reference for all the supported configuration options:
 Self-Hosting TeXMe
 ------------------
 
-Some users of TeXMe want to know if TeXMe can be hosted on one's own
-web server such that TeXMe does not load resources from any other web
-server while rendering a document, i.e., any requests to load
-resources must be made to the same web server from which TeXMe is
-loaded. Yes, it is possible to self-host TeXMe in this manner. Here
-are the steps:
+TeXMe can be saved on a local disk or hosted on one's own web server
+such that TeXMe does not load resources from any other web server
+while rendering a document. Here are the steps to set up TeXMe on a
+local disk or on one's own web server:
 
- 1. Clone copies of TeXMe and its dependencies to your own server at a
-    location from where you want to serve the files:
+ 1. Clone copies of TeXMe and its dependencies to your own system or
+    server at a location from where you want to serve the files:
 
-        git clone https://github.com/susam/texme.git
-        git clone https://github.com/markedjs/marked.git
-        git clone https://github.com/mathjax/mathjax.git
+    ```sh
+    git clone https://github.com/susam/texme.git
+    git clone https://github.com/markedjs/marked.git
+    git clone https://github.com/mathjax/mathjax.git
+    ```
 
  2. Then create a self-rendering document, say, `euler.html` like
     this:
 
-        <!DOCTYPE html>
-        <script>
-        window.texme = {
-          markdownURL: 'marked/marked.min.js',
-          MathJaxURL: 'mathjax/es5/tex-mml-chtml.js'
-        }
-        </script>
-        <script src="texme/texme.min.js"></script>
-        <textarea>
+    ```html
+    <!DOCTYPE html>
+    <script>
+    window.texme = {
+      markdownURL: 'marked/marked.min.js',
+      MathJaxURL: 'mathjax/es5/tex-mml-chtml.js'
+    }
+    </script>
+    <script src="texme/texme.min.js"></script>
+    <textarea>
 
-        # Euler's Identity
+    # Euler's Identity
 
-        In mathematics, **Euler's identity** is the equality
-        $$ e^{i \pi} + 1 = 0. $$
+    In mathematics, **Euler's identity** is the equality
+    $$ e^{i \pi} + 1 = 0. $$
 
-        ## Explanation
+    ## Explanation
 
-        Euler's identity is a special case of Euler's formula from complex
-        analysis, which states that for any real number $ x $,
-        $$ e^{ix} = \cos x + i \sin x. $$
+    Euler's identity is a special case of Euler's formula from complex
+    analysis, which states that for any real number $ x $,
+    $$ e^{ix} = \cos x + i \sin x. $$
 
-        </textarea>
+    </textarea>
+    ```
 
- 3. Now, open `euler.html` with a web browser and it should
-    self-render fine. All resources will be loaded from the local
-    disk.
+ 3. Now open `euler.html` with a web browser and it should self-render
+    fine. All resources will be loaded from the local disk.
 
  4. Now test `euler.html` by serving it via a web server. Assuming
     Python 3 is installed, here is one really easy way to test it:
 
-        python3 -m http.server
+    ```sh
+    python3 -m http.server
+    ```
 
     Then open `https://localhost:8000/euler.html` using a web server.
     The network tab in the browser's developer tools should show that
@@ -637,7 +658,7 @@ Markdown code spans and code blocks from being interpreted as LaTeX.
 Here is an example:
 
 ````html
-<!DOCTYPE html><script src="https://cdn.jsdelivr.net/npm/texme@1.2.0"></script><textarea>
+<!DOCTYPE html><script src="https://cdn.jsdelivr.net/npm/texme@1.2.2"></script><textarea>
 
 # Using Variables
 
@@ -670,7 +691,7 @@ A rendering issue like this can be prevented with the use of the
 markdown priority environment like this:
 
 ````html
-<!DOCTYPE html><script src="https://cdn.jsdelivr.net/npm/texme@1.2.0"></script><textarea>
+<!DOCTYPE html><script src="https://cdn.jsdelivr.net/npm/texme@1.2.2"></script><textarea>
 
 # Using Variables
 
@@ -707,7 +728,7 @@ description and how the usage of the `md` environment can fix it. Here
 is an example:
 
 ```html
-<!DOCTYPE html><script src="https://cdn.jsdelivr.net/npm/texme@1.2.0"></script><textarea>
+<!DOCTYPE html><script src="https://cdn.jsdelivr.net/npm/texme@1.2.2"></script><textarea>
 
 # Metasyntactic Variable
 
@@ -730,7 +751,7 @@ to a broken rendering of the document. Here is how the output looks:
 The `md` environment can be used to fix the rendering like this:
 
 ```html
-<!DOCTYPE html><script src="https://cdn.jsdelivr.net/npm/texme@1.2.0"></script><textarea>
+<!DOCTYPE html><script src="https://cdn.jsdelivr.net/npm/texme@1.2.2"></script><textarea>
 
 # Metasyntactic Variable
 
@@ -816,7 +837,7 @@ perhaps a code example that explains how TeXMe works. Consider the
 following example:
 
 `````html
-<!DOCTYPE html><script src="https://cdn.jsdelivr.net/npm/texme@1.2.0"></script><textarea>
+<!DOCTYPE html><script src="https://cdn.jsdelivr.net/npm/texme@1.2.2"></script><textarea>
 
 # Markdown Priority Environment
 
@@ -881,3 +902,31 @@ To report bugs, suggest improvements, or ask questions,
 [create issues][ISSUES].
 
 [ISSUES]: https://github.com/susam/texme/issues
+
+
+Channels
+--------
+
+The author of this project hangs out at the following places online:
+
+- Website: [susam.net](https://susam.net)
+- Twitter: [@susam](https://twitter.com/susam)
+- Mastodon: [@susam@mastodon.social](https://mastodon.social/@susam)
+- GitHub: [@susam](https://github.com/susam)
+- Matrix: [#susam:matrix.org](https://app.element.io/#/room/#susam:matrix.org)
+- IRC: [#susam:libera.chat](https://web.libera.chat/#susam)
+
+You are welcome to subscribe to, follow, or join one or more of the
+above channels to receive updates from the author or ask questions
+about this project.
+
+
+More
+----
+
+See [MathB](https://github.com/susam/mathb), a mathematics pastebin
+built using TeXMe. This is the oldest mathematics pastebin that is
+still alive on the web and serving its community of users.
+
+See [Muboard](https://github.com/susam/muboard), a self-rendering and
+distributable chalkboard built using TeXMe.

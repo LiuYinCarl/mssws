@@ -4,7 +4,6 @@
     "HomePageLink"		: "/index.html",
     "HomePageTitle"		: "Home Page",
     "FootPrint"			: "",
-    "TexmeCDNLink"		: "/lib/texme/texme.js",
     "BlogDir"			: "./blog",
     "IP"			: "127.0.0.1",
     "Port"			: "8000",

@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "marked": [
+        "lib/marked.d.ts"
+      ]
+    }
+  },
+  "include": [
+    "test/types/*.ts"
+  ]
+}

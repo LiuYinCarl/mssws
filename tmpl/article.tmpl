@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<script>window.texme = { style: 'none' }</script>
 {{ template "style.tmpl" }}
+
 <head>
   <meta charset="UTF-8">
   <title>{{ .SiteTitle }}</title>
-  <script src="{{ .TexmeCDNLink }}"></script>
 </head>
 
 <body>
@@ -12,7 +11,10 @@
   <a href= {{ .HomePageLink }} > {{ .HomePageTitle }} </a>
 
   {{ .Content }}
-</textarea>
+  <br>
+  <p>&nbsp;</p>
+  <a href= {{ .HomePageLink }} > {{ .HomePageTitle }} </a>
+  </textarea>
     </hr>
     {{ .FootPrint }}
 </body>

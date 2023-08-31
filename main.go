@@ -25,11 +25,9 @@ type SiteLink struct {
 
 type config struct {
 	SiteTitle             string `json:"SiteTitle"`
-	SiteLink			  string `json:"SiteLink"`
 	HomePageLink          string `json:"HomePageLink"`
 	HomePageTitle         string `json:"HomePageTitle"`
 	FootPrint             string `json:"FootPrint"`
-	TexmeCDNLink          string `json:"TexmeCDNLink"`
 	BlogDir               string `json:"BlogDir"`
 	IP                    string `json:"IP"`
 	Port                  string `json:"Port"`
@@ -44,14 +42,12 @@ type Article struct {
 	HomePageLink          string
 	HomePageTitle         string
 	FootPrint             string
-	TexmeCDNLink          string
 	Content               string
 }
 
 type Index struct {
 	SiteTitle string
 	FootPrint string
-	TexmeCDNLink string
 	Content string
 	SiteLinks []SiteLink
 }
@@ -83,7 +79,6 @@ func loadConfig() bool {
 		return false
 	}
 
-	conf.TexmeCDNLink			= conf.SiteLink + conf.TexmeCDNLink
 	return true
 }
 
@@ -290,7 +285,6 @@ func query(w http.ResponseWriter, r *http.Request) {
 		HomePageLink:          conf.HomePageLink,
 		HomePageTitle:         conf.HomePageTitle,
 		FootPrint:             "",
-		TexmeCDNLink:          conf.TexmeCDNLink,
 		Content:               buffer.String(),
 	}
 	temp.Execute(w, article)
@@ -315,7 +309,6 @@ func indexPage(w http.ResponseWriter, r *http.Request) {
 	index := Index{
 		SiteTitle: conf.SiteTitle,
 		FootPrint: conf.FootPrint,
-		TexmeCDNLink: conf.TexmeCDNLink,
 		Content: string(content),
 		SiteLinks: conf.SiteLinks,
 	}
@@ -338,7 +331,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 	url = strings.TrimSpace(url)
 	filePath := fmt.Sprintf(".%s", url)
 
-	fmt.Printf("filePath: %s\n", filePath)
+	fmt.Println("filePath: ", filePath)
 
 	if ok := IsFile(filePath); !ok {
 		w.Write([]byte("[404] file not exist."))
@@ -370,7 +363,6 @@ func index(w http.ResponseWriter, r *http.Request) {
 			HomePageLink:          conf.HomePageLink,
 			HomePageTitle:         conf.HomePageTitle,
 			FootPrint:             conf.FootPrint,
-			TexmeCDNLink:          conf.TexmeCDNLink,
 			Content:               string(content),
 		}
 
@@ -378,7 +370,8 @@ func index(w http.ResponseWriter, r *http.Request) {
 	} else {
 		content, err := ioutil.ReadFile(filePath)
 		if err != nil {
-			w.Write([]byte("404 file not exist.."))
+			fmt.Println("unexists = ", filePath)
+			w.Write([]byte("404 file not exist."))
 			return
 		}
 		w.Write(content)

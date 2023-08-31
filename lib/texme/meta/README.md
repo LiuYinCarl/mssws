@@ -59,7 +59,7 @@ Perform the following tasks for every release:
 
         npm run min
 
-  - Push demo and examples.
+  - Push demo, examples, and documentation.
 
         make live
 
@@ -84,10 +84,6 @@ Perform the following tasks for every release:
         npm login
         npm publish
 
-  - Publish examples.
-
-        make live
-
 
 Post-Release Checklist
 ----------------------
@@ -104,5 +100,6 @@ Perform the following tasks after every release:
         VERSION=$(sed -n 's/.*version.*: "\(.*\)",/\1/p' package.json)
         echo VERSION: $VERSION
 
+        git add -p
         git commit -em "Set version to $VERSION"
         git push origin main

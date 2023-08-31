@@ -1,3 +1,11 @@
+<script>window.texme = {
+    style: 'none',
+    markdownURL: '/lib/marked/marked.min.js',
+    MathJaxURL: '/lib/mathjax/es5/tex-mml-chtml.js'
+}
+</script>
+<script src="/lib/texme/texme.min.js"></script>
+
 <style>
   @media screen and (min-width: 40em) {
       body {
@@ -8,7 +16,7 @@
 	  margin: 1em auto;
 	  box-shadow: 0.4em 0.4em 0.4em #222;
 	  max-width: 50em;
-	  background-color: #fffff9;
+	  background-color: #ffffff;
       }
       h1, h2, h3, h4, h5, h6, h7 {
 	  margin: 1em 0 0.5em 0;
@@ -18,11 +26,16 @@
 	  max-width: 100%;
       }
       pre, code, samp, kbd {
-	  color: #009;
-	  font-family: monospace,monospace;
+	  color: #000;
+	  // font-family: monospace,monospace;
+	  // font-family: Courier, Courier;
+	  // font-family: Monaco, Monaco;
+	  // font-family: Andale Mono;
+	  // font-family: Lucida Console;
+	  font-family: Consolas, Consolas;
       }
       pre, blockquote {
-	  background: #eee;
+	  background: #f5f5f5;
 	  padding: 0.5em;
       }
       pre {
