@@ -63,10 +63,26 @@ var (
 	styleTemplatePath   = "./tmpl/style.tmpl"
 	query_file			= "query.data"
 	admin_script		= "./admin.sh"
+
+	forbidden_files = make(map[string]bool)
 )
+
+
 
 // 加载 json 配置
 func loadConfig() bool {
+	// forbidden visit files
+	forbidden_files["./admin.log"]            = true
+	forbidden_files["./directory_monitor.sh"] = true
+	forbidden_files["./genindex.py"]          = true
+	forbidden_files["./main.go"]              = true
+	forbidden_files["./server.log"]           = true
+	forbidden_files["./admin.sh"]             = true
+	forbidden_files["./config.json"]          = true
+	forbidden_files["./genindex.sh"]          = true
+	forbidden_files["./run.sh"]               = true
+	forbidden_files["./mssws_prog"]           = true
+
 	data, err := ioutil.ReadFile(confPath)
 	if err != nil {
 		fmt.Printf("read config file failed. file path is %s", confPath)
@@ -333,11 +349,14 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("filePath: ", filePath)
 
+	if _, ok := forbidden_files[filePath]; ok {
+		w.Write([]byte("try to visit forbieedn file."))
+		return
+	}
 	if ok := IsFile(filePath); !ok {
 		w.Write([]byte("[404] file not exist."))
 		return
 	}
-
 
 	suffix := ""
 	if split_list := Split(filePath, "."); len(split_list) > 1 {
