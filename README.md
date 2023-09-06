@@ -111,16 +111,6 @@ RSS 订阅
 ![rss](image/rss.png)
 
 
-admin page
-
-admin 页面
-
-visit you_site_url/admin/ to manage your server, *set admin's password in admin.sh*
-
-访问 你的网站/admin/ 页面来管理你的服务器, *在 admin.sh 脚本中设置 admin 的密码*
-
-
-
 ## 使用的工具或者库 | Used tool or library
 
 - texme
@@ -209,3 +199,8 @@ update libs, configuration, codes, remove code highlight
 
 更新了依赖库，配置和代码, 删除了代码高亮
 
+2023/09/06
+
+remove admin page, add forbidden_files list
+
+移除了 admin 页面, 增加了禁止访问页面列表

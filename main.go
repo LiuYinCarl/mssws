@@ -62,7 +62,6 @@ var (
 	queryTemplatePath	= "./tmpl/query.tmpl"
 	styleTemplatePath   = "./tmpl/style.tmpl"
 	query_file			= "query.data"
-	admin_script		= "./admin.sh"
 
 	forbidden_files = make(map[string]bool)
 )
@@ -72,12 +71,10 @@ var (
 // 加载 json 配置
 func loadConfig() bool {
 	// forbidden visit files
-	forbidden_files["./admin.log"]            = true
 	forbidden_files["./directory_monitor.sh"] = true
 	forbidden_files["./genindex.py"]          = true
 	forbidden_files["./main.go"]              = true
 	forbidden_files["./server.log"]           = true
-	forbidden_files["./admin.sh"]             = true
 	forbidden_files["./config.json"]          = true
 	forbidden_files["./genindex.sh"]          = true
 	forbidden_files["./run.sh"]               = true
@@ -170,49 +167,6 @@ func GetContentType(suffix string) string {
 		return "text/html;charset=utf-8"
 	}
 	// return "text/html;charset=utf-8"
-}
-
-func admin(w http.ResponseWriter, r *http.Request) {
-	url, err := url.PathUnescape(r.URL.Path)
-	if err != nil {
-		w.Write([]byte("url decode error."))
-		return
-	}
-
-	params := strings.Split(url, "/")
-	// remove first empty string
-	if params[0] == "" {
-		params = params[1:]
-	}
-	// remove "admin" field
-	// ["admin", "password", "update"] => ["password", "update"]
-	params = params[1:]
-	fmt.Println(params)
-
-	admin_cmd := admin_script + " " + fmt.Sprintf(strings.Join(params, " "))
-	os_cmd := exec.Command("/bin/bash", "-c", admin_cmd)
-
-	stdout, err := os_cmd.StdoutPipe()
-	if err != nil {
-		w.Write([]byte("[step 1] run admin command failed."))
-		return
-	}
-
-	// run command
-	if err := os_cmd.Start(); err != nil {
-		w.Write([]byte("[step 2]run admin command failed."))
-		fmt.Println(err)
-		return
-	}
-
-	// read admin script output and return to user
-	bytes, err := ioutil.ReadAll(stdout)
-	if err != nil {
-		w.Write([]byte("[step 3] run admin command failed."))
-		return
-	}
-
-	w.Write(bytes)
 }
 
 func query_single_file(filepath string, query_str string) bool {
@@ -407,7 +361,6 @@ func main() {
 
 	http.HandleFunc("/", index)
 	http.HandleFunc("/query", query)
-	http.HandleFunc("/admin/", admin)
 
 	ip_port := conf.IP + ":" + conf.Port
 	log.Fatal(http.ListenAndServe(ip_port, nil))
