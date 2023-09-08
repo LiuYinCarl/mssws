@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -64,6 +65,7 @@ var (
 	query_file			= "query.data"
 
 	forbidden_files = make(map[string]bool)
+	root_dir, _ = filepath.Abs("./")
 )
 
 
@@ -305,6 +307,15 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 	if _, ok := forbidden_files[filePath]; ok {
 		w.Write([]byte("try to visit forbieedn file."))
+		return
+	}
+	real_path, err := filepath.Abs(filePath)
+	if err != nil {
+		w.Write([]byte("invalid link."))
+		return
+	}
+	if !filepath.HasPrefix(real_path, root_dir) {
+		w.Write([]byte("try visit invalid directory."))
 		return
 	}
 	if ok := IsFile(filePath); !ok {
