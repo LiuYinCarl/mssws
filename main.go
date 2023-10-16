@@ -318,6 +318,11 @@ func index(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("try visit invalid directory."))
 		return
 	}
+	if filepath.HasPrefix(real_path, root_dir+"/.git") {
+		w.Write([]byte("try to visit forbidden directories."))
+		return
+	}
+
 	if ok := IsFile(filePath); !ok {
 		w.Write([]byte("[404] file not exist."))
 		return
