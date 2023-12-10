@@ -4,9 +4,15 @@ tree ./blog -f -N -P "*.md|*.pdf" -I "*.assets" --prune --ignore-case > temp.fil
 
 
 if hash python3 2>/dev/null; then
-	python3 genindex.py
+    python3 genindex.py
 else
-	python genindex.py
+    python genindex.py
+fi
+
+if [ $? -ne 0 ]; then
+    echo "run python failed"
+else
+    echo "run python succ"
 fi
 
 rm temp.file

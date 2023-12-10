@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"text/template"
 	"io"
@@ -16,26 +15,26 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
+	"strconv"
+	toml "github.com/pelletier/go-toml/v2"
+	"github.com/fsnotify/fsnotify"
 )
 
 type SiteLink struct {
-	Title string `json:"Title"`
-	Url   string `json: "Url"`
+	Title string
+	Url   string
 }
 
 type config struct {
-	SiteTitle             string `json:"SiteTitle"`
-	HomePageLink          string `json:"HomePageLink"`
-	HomePageTitle         string `json:"HomePageTitle"`
-	FootPrint             string `json:"FootPrint"`
-	BlogDir               string `json:"BlogDir"`
-	IP                    string `json:"IP"`
-	Port                  string `json:"Port"`
-	OpenDirMonitor        string `json:"OpenDirMonitor"`
-	MonitorScript         string `json:"MonitorScript"`
-	MonitorRefreshTick    time.Duration    `json:"MonitorRefreshTick"`
-	SiteLinks             []SiteLink `json:"SiteLinks"`
+	SiteTitle             string
+	HomePageLink          string
+	HomePageTitle         string
+	FootPrint             string
+	BlogDir               string
+	Ip                    string
+	Port                  int
+	OpenDirMonitor        bool
+	SiteLinks             []SiteLink
 }
 
 type Article struct {
@@ -57,7 +56,7 @@ type Index struct {
 var (
 	conf config
 	is_head				= true
-	confPath			= "./config.json"
+	confPath			= "./config.toml"
 	indexTemplatePath	= "./tmpl/index.tmpl"
 	articleTemplatePath = "./tmpl/article.tmpl"
 	queryTemplatePath	= "./tmpl/query.tmpl"
@@ -68,16 +67,14 @@ var (
 	root_dir, _ = filepath.Abs("./")
 )
 
-
-
-// 加载 json 配置
+// 加载 toml 配置
 func loadConfig() bool {
 	// forbidden visit files
 	forbidden_files["./directory_monitor.sh"] = true
 	forbidden_files["./genindex.py"]          = true
 	forbidden_files["./main.go"]              = true
 	forbidden_files["./server.log"]           = true
-	forbidden_files["./config.json"]          = true
+	forbidden_files["./config.toml"]          = true
 	forbidden_files["./genindex.sh"]          = true
 	forbidden_files["./run.sh"]               = true
 	forbidden_files["./mssws_prog"]           = true
@@ -88,25 +85,71 @@ func loadConfig() bool {
 		return false
 	}
 
-	err = json.Unmarshal(data, &conf)
+	err = toml.Unmarshal(data, &conf)
 	if err != nil {
-		fmt.Printf("config.json's content is error")
+		fmt.Printf("config.toml's content is error, %s", err)
 		return false
 	}
 
 	return true
 }
 
+// 将目录及其子目录加入 fsnotify Watch
+// fsnotify 默认不会监测子目录
+func watchSubDir(watcher *fsnotify.Watcher, dir string) {
+	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			path, err := filepath.Abs(path)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+			if err := watcher.Add(path); err != nil {
+				log.Printf("watch %s failed, err: ", path, err)
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 // 文件监控
 func dirMonitor() {
-	c := time.Tick(conf.MonitorRefreshTick * time.Second)
-	for _ = range c {
-		cmd := exec.Command("bash", conf.MonitorScript)
-		if err := cmd.Run(); err != nil {
-			fmt.Printf("run dir monitorScript:%s failed\n", conf.MonitorScript)
-		}
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal("NewWatcher failed: ", err)
 	}
+	defer watcher.Close()
+
+	done := make(chan bool)
+	go func() {
+		defer close(done)
+
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+				log.Printf("%s %s\n", event.Name, event.Op)
+				log.Println("run bash genindex.sh")
+				cmd := exec.Command("bash", "./genindex.sh")
+				if err := cmd.Run(); err != nil {
+					log.Printf("run genindex.sh failed, err: ", err)
+				}
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return
+				}
+				log.Println("error: ", err)
+			}
+		}
+	}()
+
+	watchSubDir(watcher, conf.BlogDir)
+	<-done
 }
+
 
 func Exists(path string) bool {
 	_, err := os.Stat(path) //os.Stat获取文件信息
@@ -371,13 +414,13 @@ func index(w http.ResponseWriter, r *http.Request) {
 func main() {
 	loadConfig()
 
-	if conf.OpenDirMonitor == "true" {
+	if conf.OpenDirMonitor == true {
 		go dirMonitor()
 	}
 
 	http.HandleFunc("/", index)
 	http.HandleFunc("/query", query)
 
-	ip_port := conf.IP + ":" + conf.Port
+	ip_port := conf.Ip + ":" + strconv.Itoa(conf.Port)
 	log.Fatal(http.ListenAndServe(ip_port, nil))
 }

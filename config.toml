@@ -1,0 +1,25 @@
+BlogDir = "./blog"
+FootPrint = ""
+HomePageLink = "/index.html"
+HomePageTitle = "Home Page"
+Ip = "0.0.0.0"
+OpenDirMonitor = true
+Port = 8000
+RssDesc = "a blog about tech."
+RssFile = "rss.xml"
+RssLink = "http://www.man6.org/rss.xml"
+RssTitle = "RSS of man6.org"
+SiteLink = "http://127.0.0.1:8000"
+SiteTitle = "www.man6.org"
+
+[[SiteLinks]]
+  Title = "文档"
+  Url = "http://www.man6.org/doc.md"
+
+[[SiteLinks]]
+  Title = "GitHub"
+  Url = "https://github.com/LiuYinCarl/mssws/"
+
+[[SiteLinks]]
+  Title = "RSS"
+  Url = "http://www.man6.org/rss.xml"

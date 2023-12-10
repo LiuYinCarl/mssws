@@ -1,14 +1,13 @@
-#!/bin/python3
 # -*- coding: utf-8 -*-
 
 import re
 import os
-import json
+import toml # pip3 install toml
 from urllib.request import quote, unquote
 
 def read_conf():
-    with open("./config.json", "r") as f:
-        conf = json.load(f)
+    with open("./config.toml", "r") as f:
+        conf = toml.load(f)
         return conf
 
 def filename_check(filename):
