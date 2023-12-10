@@ -8,6 +8,11 @@ site in five minutes use this tool, without any edit to your Markdown files.
 非常简单易用的静态 web 服务器，使用该工具，可以在 5 分钟内搭建出一个博客
 站点, 不用对 markdown 文件做任何修改即可实现不错的渲染效果。
 
+## Requirement|要求
+
+* Go1.17 or later
+* Python3
+
 
 ## Principle
 
@@ -204,3 +209,9 @@ update libs, configuration, codes, remove code highlight
 remove admin page, add forbidden_files list
 
 移除了 admin 页面, 增加了禁止访问页面列表
+
+2023/12/10
+
+use config.toml replace config.json
+
+使用 config.toml 替代 config.json
