@@ -8,7 +8,7 @@ genindex_script="genindex.sh"
 g_pids=()
 
 function f_get_pids() {
-    g_pids=$( pgrep "${exec_name}" )
+    g_pids=$(pgrep "${exec_name}")
     return 0
 }
 
@@ -29,8 +29,10 @@ function f_run_program() {
 
     f_get_pids
     for p in "${g_pids[@]}"; do
-	echo "kill ${exec_name} [ ${p} ]."
-	kill "${p}"
+        if [[ "${p}" =~ ^[0-9]+$ ]]; then
+	    echo "kill ${exec_name} [ ${p} ]."
+	    kill "${p}"
+        fi
     done
 
     echo "start run ${exec_name} ..."
@@ -38,10 +40,13 @@ function f_run_program() {
 
     f_get_pids
     for p in "${g_pids[@]}"; do
-	echo "run ${exec_name} [ ${p} ] success ..."
-	return
+        if [[ "${p}" =~ ^[0-9]+$ ]]; then
+	    echo "run ${exec_name} [ ${p} ] success ..."
+            exit 0
+        fi
     done
     echo "run ${exec_name} failed ..."
+    exit -1
 }
 
 
