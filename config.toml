@@ -23,3 +23,7 @@ SiteTitle = "www.man6.org"
 [[SiteLinks]]
   Title = "RSS"
   Url = "http://www.man6.org/rss.xml"
+
+[[SiteLinks]]
+  Title = "Issue"
+  Url = "https://github.com/LiuYinCarl/blog/issues"

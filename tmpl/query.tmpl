@@ -10,9 +10,13 @@
 
   <a href= {{ .HomePageLink }} > {{ .HomePageTitle }} </a>
 
-  <div>
-    the keyword was found in the following files:
-  </div>
+  <hr>
+  <form action="./query" method="POST">
+    <div>
+      <input name="search" id="search">
+      <button>重新搜索/Research</button>
+    </div>
+  </form>
   <hr>
 
   {{ .Content }}
