@@ -1,6 +1,10 @@
 #!/bin/bash
 
-tree ./blog -f -N -P "*.md|*.pdf" -I "*.assets" --prune --ignore-case > temp.file
+# tree with directories
+# tree ./blog -f -N -P "*.md|*.pdf" -I "*.assets" --prune --ignore-case > temp.file
+
+# tree without directories
+tree ./blog -i -f -N -P "*.md|*.pdf" -I "*.assets" --prune --ignore-case | grep "pdf$\|md$" > temp.file
 
 
 if hash python3 2>/dev/null; then
