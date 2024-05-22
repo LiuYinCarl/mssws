@@ -7,16 +7,19 @@
 </head>
 
 <body>
-
-  <a href= {{ .HomePageLink }} > {{ .HomePageTitle }} </a>
-
-  <hr>
-  <form action="./query" method="POST">
-    <div>
-      <input name="search" id="search">
-      <button>重新搜索/Research</button>
-    </div>
-  </form>
+  <div style="float:left">
+    <a href= {{ .HomePageLink }} > {{ .HomePageTitle }} </a>
+  </div>
+  <div style="float:right; width:%40;">
+    <form action="./query" method="POST">
+      <div>
+        <input name="search" id="search">
+        <button>重新搜索/Research</button>
+      </div>
+    </form>
+  </div>
+  <br>
+  <br>
   <hr>
 
   {{ .Content }}

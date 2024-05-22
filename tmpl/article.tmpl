@@ -8,14 +8,28 @@
 
 <body>
   <textarea>
-  <a href= {{ .HomePageLink }} > {{ .HomePageTitle }} </a>
+    <div style="float:left;">
+      <a href= {{ .HomePageLink }} > {{ .HomePageTitle }} </a>
+    </div>
+    <div style="float:right;width:40%;">
+      <form action="/query" method="POST">
+        <div>
+          <input name="search" id="search">
+          <button>搜索/Search</button>
+        </div>
+      </form>
+    </div>
+    <br>
+    <br>
+    <hr>
 
+  \begin{md}
   {{ .Content }}
-  <br>
+  \end{md}
+
   <p>&nbsp;</p>
   <a href= {{ .HomePageLink }} > {{ .HomePageTitle }} </a>
   </textarea>
-    </hr>
     {{ .FootPrint }}
 </body>
 
