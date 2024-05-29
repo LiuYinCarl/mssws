@@ -35,6 +35,7 @@ type config struct {
 	Port                  int
 	OpenDirMonitor        bool
 	SiteLinks             []SiteLink
+	CacheTime             int
 }
 
 type Article struct {
@@ -378,10 +379,10 @@ func index(w http.ResponseWriter, r *http.Request) {
 	content_type := GetContentType(suffix)
 	w.Header().Set("Content-Type", content_type)
 
-	// request js/css/icon files, cache 1 hour.
-	// TODO set as a config item
-	if suffix == "js" || suffix == "css" || suffix == "ico" {
-		w.Header().Set("Cache-Control", "max-age=3600, public")
+	if conf.CacheTime > 0 {
+		if suffix == "js" || suffix == "css" || suffix == "ico" {
+			w.Header().Set("Cache-Control", fmt.Sprintf("max-age=%d, public", conf.CacheTime))
+		}
 	}
 
 	// markdown file
