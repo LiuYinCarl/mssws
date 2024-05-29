@@ -378,8 +378,14 @@ func index(w http.ResponseWriter, r *http.Request) {
 	content_type := GetContentType(suffix)
 	w.Header().Set("Content-Type", content_type)
 
+	// request js/css/icon files, cache 1 hour.
+	// TODO set as a config item
+	if suffix == "js" || suffix == "css" || suffix == "ico" {
+		w.Header().Set("Cache-Control", "max-age=3600, public")
+	}
+
 	// markdown file
-	if filePath[len(filePath)-3:] == ".md" {
+	if suffix == "md" {
 		temp, err := template.ParseFiles(articleTemplatePath, styleTemplatePath)
 		if err != nil {
 			w.Write([]byte("load article template file failed."))
