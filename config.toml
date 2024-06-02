@@ -12,6 +12,8 @@ RssTitle = "RSS of man6.org"
 SiteLink = "http://127.0.0.1:8000"
 SiteTitle = "www.man6.org"
 CacheTime = 3600
+LogFile = "mssws.log"
+DevMode = "release" # release or debug
 
 [[SiteLinks]]
   Title = "文档"

@@ -4,9 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"text/template"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -14,10 +12,12 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"strings"
 	"strconv"
-	toml "github.com/pelletier/go-toml/v2"
+	"strings"
+	"text/template"
+
 	"github.com/fsnotify/fsnotify"
+	toml "github.com/pelletier/go-toml/v2"
 )
 
 type SiteLink struct {
@@ -36,6 +36,8 @@ type config struct {
 	OpenDirMonitor        bool
 	SiteLinks             []SiteLink
 	CacheTime             int
+	LogFile               string
+	DevMode               string
 }
 
 type Article struct {
@@ -53,7 +55,6 @@ type Index struct {
 	SiteLinks []SiteLink
 }
 
-
 var (
 	conf config
 	is_head				= true
@@ -68,29 +69,51 @@ var (
 	root_dir, _ = filepath.Abs("./")
 )
 
+func base_log(msg string) {
+	if conf.DevMode == "debug" {
+		fmt.Println(msg)
+	}
+	log.Println(msg)
+}
+
+func info_log(format string, v ... any) {
+	msg := "[INFO] " + fmt.Sprintf(format, v...)
+	base_log(msg)
+}
+
+func warn_log(format string, v ...any) {
+	msg := "[WARN] " + fmt.Sprintf(format, v...)
+	base_log(msg)
+}
+
+func err_log(format string, v ...any) {
+	msg := "[ERROR] " + fmt.Sprintf(format, v...)
+	base_log(msg)
+}
+
 // 加载 toml 配置
 func loadConfig() bool {
-	// forbidden visit files
-	forbidden_files["./directory_monitor.sh"] = true
-	forbidden_files["./genindex.py"]          = true
-	forbidden_files["./main.go"]              = true
-	forbidden_files["./server.log"]           = true
-	forbidden_files["./config.toml"]          = true
-	forbidden_files["./genindex.sh"]          = true
-	forbidden_files["./run.sh"]               = true
-	forbidden_files["./mssws_prog"]           = true
-
-	data, err := ioutil.ReadFile(confPath)
+	data, err := os.ReadFile(confPath)
 	if err != nil {
-		fmt.Printf("read config file failed. file path is %s", confPath)
+		err_log("read config file failed. file path is %s", confPath)
 		return false
 	}
 
 	err = toml.Unmarshal(data, &conf)
 	if err != nil {
-		fmt.Printf("config.toml's content is error, %s", err)
+		err_log("config.toml's content is error, %s", err)
 		return false
 	}
+
+	// forbidden visit files
+	forbidden_files["./directory_monitor.sh"] = true
+	forbidden_files["./genindex.py"]          = true
+	forbidden_files["./main.go"]              = true
+	forbidden_files["./config.toml"]          = true
+	forbidden_files["./genindex.sh"]          = true
+	forbidden_files["./run.sh"]               = true
+	forbidden_files["./mssws_prog"]           = true
+	forbidden_files[conf.LogFile]             = true
 
 	return true
 }
@@ -102,11 +125,11 @@ func watchSubDir(watcher *fsnotify.Watcher, dir string) {
 		if info.IsDir() {
 			path, err := filepath.Abs(path)
 			if err != nil {
-				log.Println(err)
+				err_log("get abs path failed, err:%v", err)
 				return err
 			}
 			if err := watcher.Add(path); err != nil {
-				log.Printf("watch %s failed, err: ", path, err)
+				err_log("watch path failed, path:%s, err:%v", path, err)
 				return err
 			}
 		}
@@ -118,7 +141,7 @@ func watchSubDir(watcher *fsnotify.Watcher, dir string) {
 func dirMonitor() {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Fatal("NewWatcher failed: ", err)
+		err_log("NewWatcher failed, err:%v", err)
 	}
 	defer watcher.Close()
 
@@ -132,17 +155,16 @@ func dirMonitor() {
 				if !ok {
 					return
 				}
-				log.Printf("%s %s\n", event.Name, event.Op)
-				log.Println("run bash genindex.sh")
+				info_log("run bash genindex.sh, event name:%s event op:%s", event.Name, event.Op)
 				cmd := exec.Command("bash", "./genindex.sh")
 				if err := cmd.Run(); err != nil {
-					log.Printf("run genindex.sh failed, err: ", err)
+					err_log("run genindex.sh failed, err:%v", err)
 				}
 			case err, ok := <-watcher.Errors:
 				if !ok {
 					return
 				}
-				log.Println("error: ", err)
+				err_log("watcher err:%v", err)
 			}
 		}
 	}()
@@ -150,7 +172,6 @@ func dirMonitor() {
 	watchSubDir(watcher, conf.BlogDir)
 	<-done
 }
-
 
 func Exists(path string) bool {
 	_, err := os.Stat(path) //os.Stat获取文件信息
@@ -217,10 +238,12 @@ func GetContentType(suffix string) string {
 
 func query_single_file(filepath string, query_str string) bool {
 	if filepath == "" {
+		err_log("query filepath is empty, filepath:%s, quert_str:%s", filepath, query_str)
 		return false
 	}
 
 	if ok := IsFile(filepath); !ok {
+		err_log("query path is not file, filepath:%s, query_str:%s", filepath, query_str)
 		return false
 	}
 
@@ -228,17 +251,20 @@ func query_single_file(filepath string, query_str string) bool {
 	// create command stdout pipe
 	stdout, err := os_cmd.StdoutPipe()
 	if err != nil {
+		err_log("create pipe failed, filepath:%s, query_str:%s, err:%v", filepath, query_str, err)
 		return false
 	}
 
 	// run command
 	if err := os_cmd.Start(); err != nil {
+		err_log("execute cmd failed, filepath:%s, query_str:%s, err:%v", filepath, query_str, err)
 		return false
 	}
 
 	// read command output
-	bytes, err := ioutil.ReadAll(stdout)
+	bytes, err := io.ReadAll(stdout)
 	if err != nil {
+
 		return false
 	}
 
@@ -252,6 +278,7 @@ func query_single_file(filepath string, query_str string) bool {
 
 func query(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
+	info_log("query string is:%s", r.Form["search"])
 	if len(r.Form["search"]) == 0 {
 		w.Write([]byte("query string is empty."))
 		return
@@ -259,12 +286,14 @@ func query(w http.ResponseWriter, r *http.Request) {
 
 	query_str := r.Form["search"][0]
 	if query_str == "" {
+		err_log("query string is empty")
 		w.Write([]byte("query string is empty."))
 		return
 	}
 
 	f_query, err := os.Open(query_file)
 	if err != nil {
+		err_log("query open file failed, query_str:%s, query_file:%s", query_str, query_file)
 		w.Write([]byte("open query file error."))
 		return
 	}
@@ -292,23 +321,26 @@ func query(w http.ResponseWriter, r *http.Request) {
 
 	temp, err := template.ParseFiles(queryTemplatePath, styleTemplatePath)
 	if err != nil {
+		err_log("load query template failed, quertTemplatePath:%s, stypeTemplatePath:%s",
+			queryTemplatePath, styleTemplatePath)
 		w.Write([]byte("load query template file failed."))
 		return
 	}
 
 	article := Article{
-		SiteTitle:             "",
-		HomePageLink:          conf.HomePageLink,
-		HomePageTitle:         conf.HomePageTitle,
-		FootPrint:             "",
-		Content:               buffer.String(),
+		SiteTitle:     "",
+		HomePageLink:  conf.HomePageLink,
+		HomePageTitle: conf.HomePageTitle,
+		FootPrint:     "",
+		Content:       buffer.String(),
 	}
 	temp.Execute(w, article)
 }
 
-func indexPage(w http.ResponseWriter, r *http.Request) {
-	content, err := ioutil.ReadFile("index.data")
+func indexPage(w http.ResponseWriter, _ *http.Request) {
+	content, err := os.ReadFile("index.data")
 	if err != nil {
+		err_log("open index.data failed")
 		w.Write([]byte("Sorry, Index Page Not Exist."))
 		return
 	}
@@ -318,6 +350,8 @@ func indexPage(w http.ResponseWriter, r *http.Request) {
 
 	temp, err := template.ParseFiles(indexTemplatePath, styleTemplatePath)
 	if err != nil {
+		err_log("load index template failed, quertTemplatePath:%s, stypeTemplatePath:%s",
+			queryTemplatePath, styleTemplatePath)
 		w.Write([]byte("load index template file failed."))
 		return
 	}
@@ -325,7 +359,7 @@ func indexPage(w http.ResponseWriter, r *http.Request) {
 	index := Index{
 		SiteTitle: conf.SiteTitle,
 		FootPrint: conf.FootPrint,
-		Content: string(content),
+		Content:   string(content),
 		SiteLinks: conf.SiteLinks,
 	}
 
@@ -335,6 +369,7 @@ func indexPage(w http.ResponseWriter, r *http.Request) {
 func index(w http.ResponseWriter, r *http.Request) {
 	url, err := url.PathUnescape(r.URL.Path)
 	if err != nil {
+		err_log("url decode failed, path:%s, err:%v", r.URL.Path, err)
 		w.Write([]byte("url decode error."))
 		return
 	}
@@ -347,7 +382,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 	url = strings.TrimSpace(url)
 	filePath := fmt.Sprintf(".%s", url)
 
-	fmt.Println("filePath: ", filePath)
+	info_log("visit file:%s", filePath)
 
 	if _, ok := forbidden_files[filePath]; ok {
 		w.Write([]byte("try to visit forbieedn file."))
@@ -358,11 +393,11 @@ func index(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("invalid link."))
 		return
 	}
-	if !filepath.HasPrefix(real_path, root_dir) {
+	if !strings.HasPrefix(real_path, root_dir) {
 		w.Write([]byte("try visit invalid directory."))
 		return
 	}
-	if filepath.HasPrefix(real_path, root_dir+"/.git") {
+	if strings.HasPrefix(real_path, root_dir+"/.git") {
 		w.Write([]byte("try to visit forbidden directories."))
 		return
 	}
@@ -389,12 +424,13 @@ func index(w http.ResponseWriter, r *http.Request) {
 	if suffix == "md" {
 		temp, err := template.ParseFiles(articleTemplatePath, styleTemplatePath)
 		if err != nil {
+			err_log("load article template failed, quertTemplatePath:%s, stypeTemplatePath:%s",
+				queryTemplatePath, styleTemplatePath)
 			w.Write([]byte("load article template file failed."))
 			return
 		}
 
-		// content := Md2html(filePath)
-		content, err := ioutil.ReadFile(filePath)
+		content, err := os.ReadFile(filePath)
 		articleName := path.Base(filePath)
 
 		article := Article{
@@ -407,9 +443,9 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 		temp.Execute(w, article)
 	} else {
-		content, err := ioutil.ReadFile(filePath)
+		content, err := os.ReadFile(filePath)
 		if err != nil {
-			fmt.Println("unexists = ", filePath)
+			warn_log("try to visit unexist file:%s", filePath)
 			w.Write([]byte("404 file not exist."))
 			return
 		}
@@ -417,9 +453,19 @@ func index(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
 func main() {
 	loadConfig()
+	info_log("mssws starting...")
+
+	// init log
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
+	log_file, err := os.OpenFile(conf.LogFile, os.O_WRONLY | os.O_APPEND | os.O_CREATE, 0644)
+	if err != nil {
+		err_log("open log file failed, file=%s, err=%v", conf.LogFile, err)
+		os.Exit(1)
+	}
+	log.SetOutput(log_file)
+	info_log("create logger success")
 
 	if conf.OpenDirMonitor == true {
 		go dirMonitor()
@@ -429,5 +475,11 @@ func main() {
 	http.HandleFunc("/query", query)
 
 	ip_port := conf.Ip + ":" + strconv.Itoa(conf.Port)
-	log.Fatal(http.ListenAndServe(ip_port, nil))
+	info_log(fmt.Sprintf("mssws start listen and serve in %s...", ip_port))
+
+	err = http.ListenAndServe(ip_port, nil)
+	if err != nil {
+		err_log("listen and serve failed, err=%v", err)
+		os.Exit(1)
+	}
 }
