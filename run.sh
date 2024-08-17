@@ -20,7 +20,7 @@ function f_check_root_rights() {
 }
 
 function f_run_program() {
-    f_check_root_rights
+    # f_check_root_rights
 
     if [ ! -f ${exec_name} ]; then
 	echo "${exec_name} don't exist, please run 'bash run.sh compile' first."
