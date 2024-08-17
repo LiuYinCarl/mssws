@@ -233,7 +233,6 @@ func GetContentType(suffix string) string {
 	default:
 		return "text/html;charset=utf-8"
 	}
-	// return "text/html;charset=utf-8"
 }
 
 func query_single_file(filepath string, query_str string) bool {
