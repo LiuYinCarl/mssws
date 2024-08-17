@@ -4,7 +4,9 @@
 # tree ./blog -f -N -P "*.md|*.pdf" -I "*.assets" --prune --ignore-case > temp.file
 
 # tree without directories
-tree ./blog -i -f -N -P "*.md|*.pdf" -I "*.assets" --prune --ignore-case | grep "pdf$\|md$" > temp.file
+tree ./blog -i -f -N -P "*.md" -I "*.assets" --prune --ignore-case | grep "pdf$\|md$" > temp.file
+echo "<hr>" >> temp.file
+tree ./blog -i -f -N -P "*.pdf" -I "*.assets" --prune --ignore-case | grep "pdf$\|md$" >> temp.file
 
 
 if hash python3 2>/dev/null; then
