@@ -246,33 +246,12 @@ func query_single_file(filepath string, query_str string) bool {
 		return false
 	}
 
-	os_cmd := exec.Command("grep", query_str, filepath)
-	// create command stdout pipe
-	stdout, err := os_cmd.StdoutPipe()
+	content, err := os.ReadFile(filepath)
 	if err != nil {
-		err_log("create pipe failed, filepath:%s, query_str:%s, err:%v", filepath, query_str, err)
 		return false
 	}
 
-	// run command
-	if err := os_cmd.Start(); err != nil {
-		err_log("execute cmd failed, filepath:%s, query_str:%s, err:%v", filepath, query_str, err)
-		return false
-	}
-
-	// read command output
-	bytes, err := io.ReadAll(stdout)
-	if err != nil {
-
-		return false
-	}
-
-	out_str := strings.TrimSpace(string(bytes))
-	if out_str == "" {
-		return false
-	} else {
-		return true
-	}
+	return strings.Contains(string(content), query_str)
 }
 
 func query(w http.ResponseWriter, r *http.Request) {
@@ -307,7 +286,9 @@ func query(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		if ok := query_single_file(string(line), query_str); ok {
+		filepath := string(line)
+
+		if ok := query_single_file(filepath, query_str); ok {
 			str := fmt.Sprintf("<a href=\"%s\">%s</a></br>", line, line)
 			return_lines = append(return_lines, str)
 		}
