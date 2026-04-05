@@ -16,16 +16,16 @@ mv ./marked  "${backup_dir}"
 mv ./texme   "${backup_dir}"
 
 git clone --depth=1 https://github.com/susam/texme.git
-git clone --depth=1 https://github.com/markedjs/marked.git
+# git clone --depth=1 https://github.com/markedjs/marked.git
 git clone --depth=1 https://github.com/mathjax/mathjax.git
 
 cd ./mathjax || exit
 rm -rf .git
 cd ..
 
+mkdir -p marked
 cd ./marked || exit
-rm -rf .git
-rm -rf test
+curl -O https://cdn.jsdelivr.net/npm/marked/marked.min.js
 cd ..
 
 cd texme || exit
