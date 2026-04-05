@@ -6,3 +6,9 @@ main
 query.data
 temp.file
 __pycache__/
+.crush/
+index.data
+mssws.log
+mssws_prog
+rss.xml
+server.log
