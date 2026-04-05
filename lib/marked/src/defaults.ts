@@ -3,33 +3,23 @@ import type { MarkedOptions } from './MarkedOptions.ts';
 /**
  * Gets the original marked default options.
  */
-export function _getDefaults(): MarkedOptions {
+export function _getDefaults<ParserOutput = string, RendererOutput = string>(): MarkedOptions<ParserOutput, RendererOutput> {
   return {
     async: false,
-    baseUrl: null,
     breaks: false,
     extensions: null,
     gfm: true,
-    headerIds: false,
-    headerPrefix: '',
-    highlight: null,
     hooks: null,
-    langPrefix: 'language-',
-    mangle: false,
     pedantic: false,
     renderer: null,
-    sanitize: false,
-    sanitizer: null,
     silent: false,
-    smartypants: false,
     tokenizer: null,
     walkTokens: null,
-    xhtml: false
   };
 }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export let _defaults: MarkedOptions<any, any> = _getDefaults();
 
-export let _defaults = _getDefaults();
-
-export function changeDefaults(newDefaults: MarkedOptions) {
+export function changeDefaults<ParserOutput = string, RendererOutput = string>(newDefaults: MarkedOptions<ParserOutput, RendererOutput>) {
   _defaults = newDefaults;
 }

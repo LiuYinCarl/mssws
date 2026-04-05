@@ -1,42 +1,48 @@
+import type { Tokens } from './Tokens.ts';
+
 /**
  * TextRenderer
  * returns only the textual part of the token
  */
-export class _TextRenderer {
+export class _TextRenderer<RendererOutput = string> {
   // no need for block level renderers
-  strong(text: string) {
-    return text;
+  strong({ text }: Tokens.Strong): RendererOutput {
+    return text as RendererOutput;
   }
 
-  em(text: string) {
-    return text;
+  em({ text }: Tokens.Em): RendererOutput {
+    return text as RendererOutput;
   }
 
-  codespan(text: string) {
-    return text;
+  codespan({ text }: Tokens.Codespan): RendererOutput {
+    return text as RendererOutput;
   }
 
-  del(text: string) {
-    return text;
+  del({ text }: Tokens.Del): RendererOutput {
+    return text as RendererOutput;
   }
 
-  html(text: string) {
-    return text;
+  html({ text }: Tokens.HTML | Tokens.Tag): RendererOutput {
+    return text as RendererOutput;
   }
 
-  text(text: string) {
-    return text;
+  text({ text }: Tokens.Text | Tokens.Escape | Tokens.Tag): RendererOutput {
+    return text as RendererOutput;
   }
 
-  link(href: string, title: string | null | undefined, text: string) {
-    return '' + text;
+  link({ text }: Tokens.Link): RendererOutput {
+    return '' + text as RendererOutput;
   }
 
-  image(href: string, title: string | null, text: string) {
-    return '' + text;
+  image({ text }: Tokens.Image): RendererOutput {
+    return '' + text as RendererOutput;
   }
 
-  br() {
-    return '';
+  br(): RendererOutput {
+    return '' as RendererOutput;
+  }
+
+  checkbox({ raw }: Tokens.Checkbox): RendererOutput {
+    return raw as RendererOutput;
   }
 }

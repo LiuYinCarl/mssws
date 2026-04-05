@@ -9,83 +9,74 @@ permissions:
   contents: read
 
 jobs:
-  Test:
+  UnitTests:
     strategy:
       matrix:
-        # lowest verison here should also be in `engines` field
-        node_version: [16, 18, 'lts/*', '*']
+        # lowest version here should also be in `engines` field
+        node_version: [20, "lts/*", "latest"]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
       - name: Install Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node_version }}
           check-latest: true
       - name: Install Dependencies
         run: npm ci
+      - name: Build 🗜️
+        run: npm run build
       - name: Run Unit Tests 👩🏽‍💻
         run: npm run test:unit
       - name: Run Spec Tests 👩🏽‍💻
         run: npm run test:specs
-      - name: Run UMD Tests 👩🏽‍💻
-        run: npm run test:umd
-      - name: Run Types Tests 👩🏽‍💻
-        run: npm run test:types
+      - name: Run CJS Tests 👩🏽‍💻
+        run: npm run test:cjs
 
-  Lint:
+  OtherTests:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
       - name: Install Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
-          node-version: 'lts/*'
-      - name: Install Dependencies
-        run: npm ci
-      - name: Lint ✨
-        run: npm run test:lint
-
-  Build:
-    name: Build and Test Types
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-      - name: Install Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 'lts/*'
+          node-version: "lts/*"
       - name: Install Dependencies
         run: npm ci
       - name: Build 🗜️
         run: npm run build
+      - name: Run UMD Tests 👩🏽‍💻
+        run: npm run test:umd
       - name: Run Types Tests 👩🏽‍💻
         run: npm run test:types
+      - name: Lint ✨
+        run: npm run test:lint
 
   Release:
     permissions:
-      contents: write
-    needs: [Test, Lint, Build]
+      contents: write # to be able to publish a GitHub release
+      # issues: write # to be able to comment on released issues
+      # pull-requests: write # to be able to comment on released pull requests
+      id-token: write # to enable use of OIDC for trusted publishing and npm provenance
+    needs: [UnitTests, OtherTests]
     if: |
       github.ref == 'refs/heads/master' &&
       github.event.repository.fork == false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
       - name: Install Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
-          node-version: 'lts/*'
+          node-version: "lts/*"
       - name: Install Dependencies
         run: npm ci
       - name: Build 🗜️
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           export SEMANTIC_RELEASE_NEXT_VERSION=$(npx semantic-release --no-ci --dry-run | grep -oP 'The next release version is \K[0-9]+\.[0-9]+\.[0-9]+')
           echo "Next Version: $SEMANTIC_RELEASE_NEXT_VERSION"
@@ -98,5 +89,4 @@ jobs:
       - name: Release 🎉
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npx semantic-release

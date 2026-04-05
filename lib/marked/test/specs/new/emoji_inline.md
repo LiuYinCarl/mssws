@@ -10,6 +10,24 @@ Situations where it fails:
 
 **🏖️🤓💁 test**
 
+**💁 test** test
+
+test **💁 test**
+
+test **💁 test** test
+
+***test 💁***
+
+***💁 test***
+
+***💁 test*** test
+
+test ***💁 test***
+
+test ***💁 test*** test
+
+****💁 test****
+
 Situations where it works:
 
 **💁 **
@@ -19,3 +37,7 @@ Situations where it works:
 Here, the emoji rendering works, but the text doesn't get rendered in italic.
 
 *💁 test*
+
+*t💁t* test
+
+**t💁t** test

@@ -13,6 +13,8 @@ const marked = new Marked([options, extension, ...]);
 |:--------|:-------|:----------------------------------------------------------------------|
 | options |`object`|The same arguments that can be passed to [`marked.use`](/using_pro#use)|
 
+Be careful: marked.use(...) should not be used in a loop or function. It should only be used directly after new Marked is created or marked is imported.
+
 ## The `parse` function
 
 ```js
@@ -54,16 +56,22 @@ console.log(marked.parse(markdownString));
 |silent      |`boolean` |`false`  |v0.2.7   |If true, the parser does not throw any exception or log any warning. Any error will be returned as a string.|
 |tokenizer    |`object`  |`new Tokenizer()`|v1.0.0|An object containing functions to create tokens from markdown. See [extensibility](/using_pro) for more details.|
 |walkTokens   |`function`  |`null`|v1.1.0|A function which is called for every token. See [extensibility](/using_pro) for more details.|
-|baseUrl (**deprecated**)|`string`  |`null`   |v0.3.9    |Deprecated in v5.0.0 use [`marked-base-url`](https://www.npmjs.com/package/marked-base-url) to prefix url for any relative link. |
-|headerIds (**deprecated**)|`boolean` |`true`   |v0.4.0   |Deprecated in v5.0.0 use [`marked-gfm-heading-id`](https://www.npmjs.com/package/marked-gfm-heading-id) to include an `id` attribute when emitting headings (h1, h2, h3, etc).|
-|headerPrefix (**deprecated**)|`string`  |`''`     |v0.3.0   |Deprecated in v5.0.0 use [`marked-gfm-heading-id`](https://www.npmjs.com/package/marked-gfm-heading-id) to add a string to prefix the `id` attribute when emitting headings (h1, h2, h3, etc).|
-|highlight (**deprecated**)|`function`|`null`   |v0.3.0   |Deprecated in v5.0.0 use [`marked-highlight`](https://www.npmjs.com/package/marked-highlight) to add highlighting to code blocks. |
-|langPrefix  (**deprecated**)|`string`  |`'language-'`|v0.3.0|Deprecated in v5.0.0 use [`marked-highlight`](https://www.npmjs.com/package/marked-highlight) to prefix the className in a `<code>` block. Useful for syntax highlighting.|
-|mangle (**deprecated**)|`boolean` |`true`   |v0.3.4   |Deprecated in v5.0.0 use [`marked-mangle`](https://www.npmjs.com/package/marked-mangle) to mangle email addresses.|
-|sanitize (**deprecated**)|`boolean` |`false`  |v0.2.1   |If true, sanitize the HTML passed into `markdownString` with the `sanitizer` function.<br>**Warning**: This feature is deprecated and it should NOT be used as it cannot be considered secure.<br>Instead use a sanitize library, like [DOMPurify](https://github.com/cure53/DOMPurify) (recommended), [sanitize-html](https://github.com/apostrophecms/sanitize-html) or [insane](https://github.com/bevacqua/insane) on the output HTML! |
-|sanitizer  (**deprecated**)|`function`|`null`   |v0.3.4   |A function to sanitize the HTML passed into `markdownString`.|
-|smartypants (**deprecated**)|`boolean` |`false`  |v0.2.9   |Deprecated in v5.0.0 use [`marked-smartypants`](https://www.npmjs.com/package/marked-smartypants) to use "smart" typographic punctuation for things like quotes and dashes.|
-|xhtml (**deprecated**)|`boolean` |`false`  |v0.3.2   |Deprecated in v5.0.0 use [`marked-xhtml`](https://www.npmjs.com/package/marked-xhtml) to emit self-closing HTML tags for void elements (&lt;br/&gt;, &lt;img/&gt;, etc.) with a "/" as required by XHTML.|
+
+## Old Options
+
+|Member      |Type      |Default  |Since    |Notes         |
+|:-----------|:---------|:--------|:--------|:-------------|
+|smartLists (**removed**)| `boolean` | `false` |v0.2.8 | Removed in v3.0.0. |
+|baseUrl (**removed**)|`string`  |`null`   |v0.3.9    |Removed in v8.0.0 use [`marked-base-url`](https://www.npmjs.com/package/marked-base-url) to prefix url for any relative link. |
+|headerIds (**removed**)|`boolean` |`true`   |v0.4.0   |Removed in v8.0.0 use [`marked-gfm-heading-id`](https://www.npmjs.com/package/marked-gfm-heading-id) to include an `id` attribute when emitting headings (h1, h2, h3, etc).|
+|headerPrefix (**removed**)|`string`  |`''`     |v0.3.0   |Removed in v8.0.0 use [`marked-gfm-heading-id`](https://www.npmjs.com/package/marked-gfm-heading-id) to add a string to prefix the `id` attribute when emitting headings (h1, h2, h3, etc).|
+|highlight (**removed**)|`function`|`null`   |v0.3.0   |Removed in v8.0.0 use [`marked-highlight`](https://www.npmjs.com/package/marked-highlight) to add highlighting to code blocks. |
+|langPrefix  (**removed**)|`string`  |`'language-'`|v0.3.0|Removed in v8.0.0 use [`marked-highlight`](https://www.npmjs.com/package/marked-highlight) to prefix the className in a `<code>` block. Useful for syntax highlighting.|
+|mangle (**removed**)|`boolean` |`true`   |v0.3.4   |Removed in v8.0.0 use [`marked-mangle`](https://www.npmjs.com/package/marked-mangle) to mangle email addresses.|
+|sanitize (**removed**)|`boolean` |`false`  |v0.2.1   |Removed in v8.0.0 use a sanitize library, like [DOMPurify](https://github.com/cure53/DOMPurify) (recommended), [sanitize-html](https://github.com/apostrophecms/sanitize-html) or [insane](https://github.com/bevacqua/insane) on the output HTML! |
+|sanitizer  (**removed**)|`function`|`null`   |v0.3.4   |Removed in v8.0.0 use a sanitize library, like [DOMPurify](https://github.com/cure53/DOMPurify) (recommended), [sanitize-html](https://github.com/apostrophecms/sanitize-html) or [insane](https://github.com/bevacqua/insane) on the output HTML!|
+|smartypants (**removed**)|`boolean` |`false`  |v0.2.9   |Removed in v8.0.0 use [`marked-smartypants`](https://www.npmjs.com/package/marked-smartypants) to use "smart" typographic punctuation for things like quotes and dashes.|
+|xhtml (**removed**)|`boolean` |`false`  |v0.3.2   |Removed in v8.0.0 use [`marked-xhtml`](https://www.npmjs.com/package/marked-xhtml) to emit self-closing HTML tags for void elements (&lt;br/&gt;, &lt;img/&gt;, etc.) with a "/" as required by XHTML.|
 
 <h2 id="extensions">Known Extensions</h2>
 
@@ -73,20 +81,76 @@ Marked can be extended using [custom extensions](/using_pro#extensions). This is
 
 |Name|Package Name|Description|
 |:---|:-----------|:----------|
+|[ABCjs](https://www.npmjs.com/package/marked-abc)|[`abcjs`](https://www.npmjs.com/package/marked-abc)|[ABCjs](https://www.abcjs.net/) sheet music rendering|
 |[Admonition](https://www.npmjs.com/package/marked-admonition-extension)|[`marked-admonition-extension`](https://www.npmjs.com/package/marked-admonition-extension)| Admonition extension |
-|[Base URL](https://github.com/markedjs/marked-base-url)|[`marked-base-url`](https://www.npmjs.com/package/marked-base-url)|Prefix relative urls with a base URL.|
+|[Alert](https://github.com/bent10/marked-extensions/tree/main/packages/alert)|[`marked-alert`](https://www.npmjs.com/package/marked-alert)|Enables [GFM alerts](https://github.com/orgs/community/discussions/16925)|
+|[Base URL](https://github.com/markedjs/marked-base-url)|[`marked-base-url`](https://www.npmjs.com/package/marked-base-url)|Prefix relative urls with a base URL|
 |[Bidi](https://github.com/markedjs/marked-bidi)|[`marked-bidi`](https://www.npmjs.com/package/marked-bidi)|Add Bidirectional text support to the HTML|
+|[CJK Breaks](https://github.com/chirsz-ever/marked-cjk-breaks)|[`marked-cjk-breaks`](https://www.npmjs.com/package/marked-cjk-breaks)|Suppress soft linebreaks between east asian characters|
+|[Code Format](https://github.com/bent10/marked-extensions/tree/main/packages/code-format)|[`marked-code-format`](https://www.npmjs.com/package/marked-code-format)|Formatting code blocks using Prettier|
+|[Code JSX Renderer](https://github.com/bent10/marked-extensions/tree/main/packages/code-jsx-renderer)|[`marked-code-jsx-renderer`](https://www.npmjs.com/package/marked-code-jsx-renderer)|Render JSX code blocks using a custom renderer and components|
+|[Code Preview](https://github.com/bent10/marked-extensions/tree/main/packages/code-preview)|[`marked-code-preview`](https://www.npmjs.com/package/marked-code-preview)|Transform code blocks into code previews|
 |[Custom Heading ID](https://github.com/markedjs/marked-custom-heading-id)|[`marked-custom-heading-id`](https://www.npmjs.com/package/marked-custom-heading-id)|Specify a custom heading id in headings with the [Markdown Extended Syntax](https://www.markdownguide.org/extended-syntax/#heading-ids) `# heading {#custom-id}`|
+|[Directive](https://github.com/bent10/marked-extensions/tree/main/packages/directive)|[`marked-directive`](https://www.npmjs.com/package/marked-directive)|Supports [directives syntax](https://talk.commonmark.org/t/generic-directives-plugins-syntax/444)|
 |[Emoji](https://github.com/UziTech/marked-emoji)|[`marked-emoji`](https://www.npmjs.com/package/marked-emoji)|Add emoji support like on GitHub|
 |[Extended Tables](https://github.com/calculuschild/marked-extended-tables)|[`marked-extended-tables`](https://www.npmjs.com/package/marked-extended-tables)|Extends the standard Github-Flavored tables to support advanced features: Column Spanning, Row Spanning, Multi-row headers|
-|[GFM Heading ID](https://github.com/markedjs/marked-gfm-heading-id)|[`marked-gfm-heading-id`](https://www.npmjs.com/package/marked-gfm-heading-id)|Use [`github-slugger`](https://github.com/Flet/github-slugger) to create the heading IDs and allow a custom prefix.|
+|[Footnote](https://github.com/bent10/marked-extensions/tree/main/packages/footnote)|[`marked-footnote`](https://www.npmjs.com/package/marked-footnote)|Enables [GFM footnotes](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#footnotes)|
+|[GFM Heading ID](https://github.com/markedjs/marked-gfm-heading-id)|[`marked-gfm-heading-id`](https://www.npmjs.com/package/marked-gfm-heading-id)|Use [`github-slugger`](https://github.com/Flet/github-slugger) to create the heading IDs and allow a custom prefix|
 |[Highlight](https://github.com/markedjs/marked-highlight)|[`marked-highlight`](https://www.npmjs.com/package/marked-highlight)|Highlight code blocks|
+|[HTML Renderer](https://github.com/UziTech/marked-html-renderer)|[`marked-html-renderer`](https://www.npmjs.com/package/marked-html-renderer)|Output HTML Elements instead of a string|
+|[Jira Renderer](https://github.com/mrmarble/marked-jira)|[`marked-jira`](https://www.npmjs.com/package/marked-jira)|Output Jira compatible format|
 |[Katex Code](https://github.com/UziTech/marked-katex-extension)|[`marked-katex-extension`](https://www.npmjs.com/package/marked-katex-extension)|Render [katex](https://katex.org/) code|
 |[LinkifyIt](https://github.com/UziTech/marked-linkify-it)|[`marked-linkify-it`](https://www.npmjs.com/package/marked-linkify-it)|Use [linkify-it](https://github.com/markdown-it/linkify-it) for urls|
 |[Mangle](https://github.com/markedjs/marked-mangle)|[`marked-mangle`](https://www.npmjs.com/package/marked-mangle)|Mangle mailto links with HTML character references|
-|[Misskey-flavored Markdown](https://akkoma.dev/sfr/marked-mfm)|[`marked-mfm`](https://www.npmjs.com/package/marked-mfm)|Custom extension for [Misskey-flavored Markdown](https://github.com/misskey-dev/mfm.js/blob/develop/docs/syntax.md).|
-|[Smartypants](https://github.com/markedjs/marked-smartypants)|[`marked-smartypants`](https://www.npmjs.com/package/marked-smartypants)|Use [smartypants](https://www.npmjs.com/package/smartypants) to use "smart" typographic punctuation for things like quotes and dashes.|
-|[XHTML](https://github.com/markedjs/marked-xhtml)|[`marked-xhtml`](https://www.npmjs.com/package/marked-xhtml)|Emit self-closing HTML tags for void elements (&lt;br/&gt;, &lt;img/&gt;, etc.) with a "/" as required by XHTML.|
+|[Marked Responsive Images](https://github.com/ELowry/MarkedResponsiveImages)|[`marked-responsive-images`](https://www.npmjs.com/package/marked-responsive-images)|Generate responsive (`srcset`) images based on structured filenames|
+|[Misskey-flavored Markdown](https://akkoma.dev/sfr/marked-mfm)|[`marked-mfm`](https://www.npmjs.com/package/marked-mfm)|Custom extension for [Misskey-flavored Markdown](https://github.com/misskey-dev/mfm.js/blob/develop/docs/syntax.md)|
+|[More Lists](https://github.com/jasny/marked-more-lists)|[`marked-more-lists`](https://www.npmjs.com/package/marked-more-lists)|Support for alphabetical and roman numeral ordered lists|
+|[Plaintify](https://github.com/bent10/marked-extensions/tree/main/packages/plaintify)|[`marked-plaintify`](https://www.npmjs.com/package/marked-plaintify)|Converts Markdown to Plaintext|
+|[Shiki](https://github.com/bent10/marked-extensions/tree/main/packages/shiki)|[`marked-shiki`](https://www.npmjs.com/package/marked-shiki)|Integrating [Shiki](https://shiki.style/) syntax highlighting|
+|[Sequential Hooks](https://github.com/bent10/marked-extensions/tree/main/packages/sequential-hooks)|[`marked-sequential-hooks`](https://www.npmjs.com/package/marked-sequential-hooks)|Enables the sequential preprocessing and post-processing within [sequential hooks](https://github.com/bent10/marked-extensions#sequential-hooks)|
+|[Smartypants](https://github.com/markedjs/marked-smartypants)|[`marked-smartypants`](https://www.npmjs.com/package/marked-smartypants)|Use [smartypants](https://www.npmjs.com/package/smartypants) to use "smart" typographic punctuation for things like quotes and dashes|
+|[Smartypants lite](https://github.com/calculuschild/marked-smartypants-lite)|[`marked-smartypants-lite`](https://www.npmjs.com/package/marked-smartypants-lite)|A faster lighter version of marked-smartypants that doesn't use any external dependencies to create "smart" typographic punctuation for things like quotes and dashes|
+|[Token Position](https://github.com/UziTech/marked-token-position)|[`marked-token-position`](https://www.npmjs.com/package/marked-token-position)|Adds a `position` field to each token with `start` and `end` properties containing `line`, `column`, and `offset`|
+|[Typograf](https://github.com/laidrivm/marked-typograf)|[`marked-typograf`](https://www.npmjs.com/package/marked-typograf)|Use [typograf](https://www.npmjs.com/package/typograf) as a more powerful and extendable alternative to Smartypants for creating “smart” typographic punctuation, such as quotes and dashes|
+|[XHTML](https://github.com/markedjs/marked-xhtml)|[`marked-xhtml`](https://www.npmjs.com/package/marked-xhtml)|Emit self-closing HTML tags for void elements (&lt;br/&gt;, &lt;img/&gt;, etc.) with a "/" as required by XHTML|
+
+<h2 id="user-examples">User Examples</h2>
+
+<details>
+
+<summary>Marked can render on-page content as markdown in the browser.</summary>
+
+```html
+<!DOCTYPE html>
+<html>
+ <head>
+   <!-- Suggested stylesheet -->
+   <link rel="stylesheet" 
+    href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.8.1/github-markdown.min.css"
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+   <title>Marked for the full page</title>
+ </head>
+
+ <body> 
+  <textarea id="markdown-source" style="display: none;">
+# Title
+
+Lots of text using **markdown syntax.**
+  </textarea>
+  <div id="content" class="markdown-body"></div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/marked/lib/marked.umd.js"></script>
+  <script>
+    const source = document.getElementById('markdown-source').value;
+    
+    // Parse the markdown and render it into the content div.
+    document.getElementById('content').innerHTML = marked.parse(source);
+  </script>
+ </body>
+</html>
+```
+</details>
 
 <h2 id="inline">Inline Markdown</h2>
 
@@ -150,7 +214,7 @@ markedWorker.postMessage(markdownString);
 ```js
 // markedWorker.js
 
-importScripts('path/to/marked.min.js');
+importScripts('path/to/marked.umd.js');
 
 onmessage = (e) => {
   const markdownString = e.data

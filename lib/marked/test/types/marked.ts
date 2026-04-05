@@ -1,11 +1,10 @@
 /* eslint-disable */
 import { marked } from 'marked';
-import { expectType } from 'ts-expect';
 
 // other exports
 
-import { Lexer, Parser, Tokenizer, Renderer, TextRenderer, Slugger } from 'marked';
-import type { Tokens, MarkedExtension, TokenizerAndRendererExtension, Token ,TokenizerExtension, MarkedOptions, TokensList, Rules, RendererExtension } from 'marked';
+import { Lexer, Parser, Tokenizer, Renderer, TextRenderer, Marked } from 'marked';
+import type { Tokens, MarkedExtension, TokenizerAndRendererExtension, Token ,TokenizerExtension, MarkedOptions, TokensList, RendererExtension, RendererObject } from 'marked';
 
 const tokenizer = new marked.Tokenizer();
 
@@ -31,18 +30,10 @@ tokenizer.inlineText = function inlineText(...args: Parameters<Tokenizer['inline
 };
 
 let options: MarkedOptions = {
-  baseUrl: '',
   gfm: true,
   breaks: false,
   pedantic: false,
-  sanitize: true,
-  smartLists: true,
   silent: false,
-  highlight(code: string, lang: string | undefined) {
-    return '';
-  },
-  langPrefix: 'lang-',
-  smartypants: false,
   tokenizer,
   renderer: new marked.Renderer(),
   walkTokens: token => {
@@ -52,36 +43,23 @@ let options: MarkedOptions = {
   }
 };
 
-options.highlight = (code: string, lang: string | undefined, callback?: (error: any, code?: string) => string | void) => {
-  callback?.(new Error());
-  callback?.(null, '');
-};
-
 options = marked.getDefaults();
 options = marked.defaults;
-
-function callback(err: Error | null, markdown: string | undefined) {
-  console.log('Callback called!');
-  console.log(markdown);
-}
 
 let myOldMarked: typeof marked = marked.options(options);
 myOldMarked = marked.setOptions(options);
 
 console.log(marked('1) I am using __markdown__.'));
 console.log(marked('2) I am using __markdown__.', options));
-marked('3) I am using __markdown__.', callback);
-marked('4) I am using __markdown__.', options, callback);
 
 console.log(marked.parse('5) I am using __markdown__.'));
 console.log(marked.parse('6) I am using __markdown__.', options));
-marked.parse('7) I am using __markdown__.', callback);
-marked.parse('8) I am using __markdown__.', options, callback);
 
 console.log(marked.parseInline('9) I am using __markdown__.'));
 console.log(marked.parseInline('10) I am using __markdown__.', options));
 
 const text = 'Something';
+const raw = 'Raw';
 const tokens: TokensList = marked.lexer(text, options);
 console.log(marked.parser(tokens));
 
@@ -93,46 +71,46 @@ console.log(tokens3);
 // verifying that the second param to inlineTokens can be ignored
 const tokens3a = lexer.inlineTokens(text);
 console.log(tokens3a);
-const re: Rules = marked.Lexer.rules;
+const re: Record<string, Record<string, Record<string, RegExp>>> = marked.Lexer.rules;
 const lexerOptions: MarkedOptions = lexer.options;
 
 const renderer = new marked.Renderer();
-renderer.heading = (text, level, raw, slugger) => {
-  return text + level.toString() + slugger.slug(raw);
+renderer.heading = ({ text, depth }) => {
+  return text + depth.toString();
 };
 renderer.hr = () => {
-  return `<hr${renderer.options.xhtml ? '/' : ''}>\n`;
+  return `<hr>\n`;
 };
 renderer.checkbox = checked => {
   return checked ? 'CHECKED' : 'UNCHECKED';
 };
 
 class ExtendedRenderer extends marked.Renderer {
-  code = (code: string, language: string | undefined, isEscaped: boolean): string => super.code(code, language, isEscaped);
-  blockquote = (quote: string): string => super.blockquote(quote);
-  html = (html: string): string => super.html(html);
-  heading = (text: string, level: 1 | 2 | 3 | 4 | 5 | 6, raw: string, slugger: Slugger): string => super.heading(text, level, raw, slugger);
-  hr = (): string => super.hr();
-  list = (body: string, ordered: boolean, start: number): string => super.list(body, ordered, start);
-  listitem = (text: string, task: boolean, checked: boolean): string => super.listitem(text, task, checked);
-  checkbox = (checked: boolean): string => super.checkbox(checked);
-  paragraph = (text: string): string => super.paragraph(text);
-  table = (header: string, body: string): string => super.table(header, body);
-  tablerow = (content: string): string => super.tablerow(content);
-  tablecell = (content: string, flags: { header: boolean; align: 'center' | 'left' | 'right' | null }): string => super.tablecell(content, flags);
-  strong = (text: string): string => super.strong(text);
-  em = (text: string): string => super.em(text);
-  codespan = (code: string): string => super.codespan(code);
-  br = (): string => super.br();
-  del = (text: string): string => super.del(text);
-  link = (href: string, title: string, text: string): string => super.link(href, title, text);
-  image = (href: string, title: string, text: string): string => super.image(href, title, text);
+  code = ({ type, raw,  text, codeBlockStyle, lang, escaped }: Tokens.Code): string => super.code({ type, raw, text, codeBlockStyle, lang, escaped });
+  blockquote = ({ type, raw, text, tokens }: Tokens.Blockquote): string => super.blockquote({ type, raw, text, tokens });
+  html = ({ type, raw, text, pre, block }: Tokens.HTML): string => super.html({ type, raw, text, pre, block });
+  heading = ({ type, raw, text, depth, tokens }: Tokens.Heading): string => super.heading({ type, raw, text, depth, tokens });
+  hr = ({ type, raw }: Tokens.Hr): string => super.hr({ type, raw });
+  list = ({ type, raw, ordered, start, loose, items }: Tokens.List): string => super.list({ type, raw, ordered, start, loose, items});
+  listitem = ({ type, raw, task, checked, loose, text, tokens }: Tokens.ListItem): string => super.listitem({ type, raw, task, checked, loose, text, tokens });
+  checkbox = ({ type, raw, checked }: Tokens.Checkbox): string => super.checkbox({ type, raw, checked });
+  paragraph = ({ type, raw, pre, text, tokens }: Tokens.Paragraph): string => super.paragraph({ type, raw, pre, text, tokens });
+  table = ({ type, raw, align, header, rows }: Tokens.Table): string => super.table({ type, raw, align, header, rows });
+  tablerow = ({ text }: Tokens.TableRow): string => super.tablerow({ text });
+  tablecell = ({ text, tokens, header, align }: Tokens.TableCell): string => super.tablecell({ text, tokens, header, align });
+  strong = ({ type, raw, text, tokens }: Tokens.Strong): string => super.strong({ type, raw, text, tokens });
+  em = ({ type, raw, text, tokens }: Tokens.Em): string => super.em({ type, raw, text, tokens });
+  codespan = ({ type, raw, text }: Tokens.Codespan): string => super.codespan({ type, raw, text });
+  br = ({ type, raw }: Tokens.Br): string => super.br({ type, raw });
+  del = ({ type, raw, text, tokens }: Tokens.Del): string => super.del({ type, raw, text, tokens });
+  link = ({ type, raw, href, title, text, tokens }: Tokens.Link): string => super.link({ type, raw, href, title, text, tokens });
+  image = ({ type, raw, href, title, text }: Tokens.Image): string => super.image({ type, raw, href, title, text, tokens });
 }
 
 const rendererOptions: MarkedOptions = renderer.options;
 
 const textRenderer = new marked.TextRenderer();
-console.log(textRenderer.strong(text));
+console.log(textRenderer.strong({ type : 'strong', raw, text, tokens }));
 
 const parseTestText = '- list1\n  - list1.1\n\n listend';
 const parseTestTokens: TokensList = marked.lexer(parseTestText, options);
@@ -149,27 +127,37 @@ console.log(parser.parse(parseTestTokens));
 console.log(marked.Parser.parse(parseTestTokens));
 const parserOptions: MarkedOptions = parser.options;
 
-const slugger = new marked.Slugger();
-console.log(slugger.slug('Test Slug'));
-console.log(slugger.slug('Test Slug', { dryrun: true }));
-
 marked.use({ renderer }, { tokenizer });
 
 marked.use({
   renderer: {
-    heading(text, level) {
-      if (level > 3) {
-        return `<p>${text}</p>`;
+    heading({ tokens, depth }) {
+      if (depth > 3) {
+        return `<p>${this.parser.parseInline(tokens)}</p>`;
       }
 
       return false;
     },
-    listitem(text, task, checked) {
+    listitem({ text, task, checked }) {
       if (task) return `<li class="task-list-item ${checked ? 'checked' : ''}">${text}</li>\n`;
       else return `<li>${text}</li>\n`;
     }
   },
   tokenizer: {
+    heading(src) {
+      const cap = this.rules.block.heading.exec(src);
+      if (cap) {
+        let text = cap[2].trim();
+
+        return {
+          type: 'heading',
+          raw: cap[0],
+          depth: cap[1].length,
+          text,
+          tokens: this.lexer.inline(text)
+        };
+      }
+    },
     codespan(src) {
       const match = src.match(/\$+([^\$\n]+?)\$+/);
       if (match) {
@@ -269,18 +257,18 @@ const md = '# foobar';
 const asyncMarked: string = await marked(md, { async: true });
 const promiseMarked: Promise<string> = marked(md, { async: true });
 const notAsyncMarked: string = marked(md, { async: false });
+// @ts-expect-error marked can still be async if an extension sets `async: true`
 const defaultMarked: string = marked(md);
-expectType<void>(marked(md, (_: any, res: string | undefined) => { res; }));
-expectType<void>(marked(md, { async: true }, (_: any, res: string | undefined) => { res; }));
-expectType<void>(marked(md, { async: false }, (_: any, res: string | undefined) => { res; }));
+// as string can be used if no extensions set `async: true`
+const stringMarked: string = marked(md) as string;
 
 const asyncMarkedParse: string = await marked.parse(md, { async: true });
-const promiseMarkedParse: Promise<string> = marked.parse(md, { async: true, headerIds: false });
+const promiseMarkedParse: Promise<string> = marked.parse(md, { async: true });
 const notAsyncMarkedParse: string = marked.parse(md, { async: false });
+// @ts-expect-error marked can still be async if an extension sets `async: true`
 const defaultMarkedParse: string = marked.parse(md);
-expectType<void>(marked.parse(md, (_: any, res: string | undefined) => { res; }));
-expectType<void>(marked(md, { async: true }, (_: any, res: string | undefined) => { res; }));
-expectType<void>(marked(md, { async: false }, (_: any, res: string | undefined) => { res; }));
+// as string can be used if no extensions set `async: true`
+const stringMarkedParse: string = marked.parse(md) as string;
 })();
 
 // Tests for List and ListItem
@@ -330,15 +318,15 @@ const tokens4 = lexer2.lex('# test');
 const parser2 = new Parser();
 console.log(parser2.parse(tokens4));
 
-const slugger2 = new Slugger();
-console.log(slugger2.slug('Test Slug'));
-
 marked.use({ renderer: new Renderer() });
 marked.use({ renderer: new TextRenderer() });
 marked.use({ tokenizer: new Tokenizer() });
 marked.use({
   hooks: {
     preprocess(markdown) {
+      if (this.options.async) {
+        return Promise.resolve(markdown);
+      }
       return markdown;
     },
     postprocess(html) {
@@ -346,3 +334,81 @@ marked.use({
     }
   }
 });
+marked.use({
+  hooks: {
+    processAllTokens(tokens) {
+      return tokens;
+    }
+  }
+});
+marked.use({
+  hooks: {
+    provideLexer() {
+      return this.block ? Lexer.lex : Lexer.lexInline;
+    },
+    provideParser() {
+      return this.block ? Parser.parse : Parser.parseInline;
+    },
+  }
+});
+marked.use({
+  async: true,
+  hooks: {
+    async preprocess(markdown) {
+      return markdown;
+    },
+    async postprocess(html) {
+      return html;
+    },
+    async processAllTokens(tokens) {
+      return tokens;
+    }
+  }
+});
+
+// @ts-expect-error block is not exported
+import { block } from 'marked';
+// @ts-expect-error inline is not exported
+import { inline } from 'marked';
+// Rules is exported
+import type { Rules } from 'marked';
+
+marked.parse('', {
+  async: undefined,
+  breaks: undefined,
+  extensions: undefined,
+  gfm: undefined,
+  hooks: undefined,
+  pedantic: undefined,
+  renderer: undefined,
+  silent: undefined,
+  tokenizer: undefined,
+  walkTokens: undefined,
+});
+
+marked.use({
+  async: undefined,
+  breaks: undefined,
+  extensions: undefined,
+  gfm: undefined,
+  hooks: undefined,
+  pedantic: undefined,
+  renderer: undefined,
+  silent: undefined,
+  tokenizer: undefined,
+  walkTokens: undefined,
+});
+
+const markedNumber = new Marked<number, number>();
+const rendererNumber = {
+  html() {
+    return 1;
+  }
+};
+function parserNumber(tokens: Token[], options?: MarkedOptions<number, number>){
+    return 1;
+};
+markedNumber.use({ renderer: rendererNumber, hooks: { provideParser() { return parserNumber; } } });
+
+const num: number = await markedNumber.parse('');
+console.log(num);

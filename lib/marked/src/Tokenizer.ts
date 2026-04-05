@@ -2,42 +2,34 @@ import { _defaults } from './defaults.ts';
 import {
   rtrim,
   splitCells,
-  escape,
-  findClosingBracket
+  findClosingBracket,
+  expandTabs,
 } from './helpers.ts';
+import type { Rules } from './rules.ts';
 import type { _Lexer } from './Lexer.ts';
-import type { Links, Tokens } from './Tokens.ts';
+import type { Links, Tokens, Token } from './Tokens.ts';
 import type { MarkedOptions } from './MarkedOptions.ts';
 
-function outputLink(cap: string[], link: Pick<Tokens.Link, 'href' | 'title'>, raw: string, lexer: _Lexer): Tokens.Link | Tokens.Image {
+function outputLink(cap: string[], link: Pick<Tokens.Link, 'href' | 'title'>, raw: string, lexer: _Lexer, rules: Rules): Tokens.Link | Tokens.Image {
   const href = link.href;
-  const title = link.title ? escape(link.title) : null;
-  const text = cap[1].replace(/\\([\[\]])/g, '$1');
+  const title = link.title || null;
+  const text = cap[1].replace(rules.other.outputLinkReplace, '$1');
 
-  if (cap[0].charAt(0) !== '!') {
-    lexer.state.inLink = true;
-    const token: Tokens.Link = {
-      type: 'link',
-      raw,
-      href,
-      title,
-      text,
-      tokens: lexer.inlineTokens(text)
-    };
-    lexer.state.inLink = false;
-    return token;
-  }
-  return {
-    type: 'image',
+  lexer.state.inLink = true;
+  const token: Tokens.Link | Tokens.Image = {
+    type: cap[0].charAt(0) === '!' ? 'image' : 'link',
     raw,
     href,
     title,
-    text: escape(text)
+    text,
+    tokens: lexer.inlineTokens(text),
   };
+  lexer.state.inLink = false;
+  return token;
 }
 
-function indentCodeCompensation(raw: string, text: string) {
-  const matchIndentToCode = raw.match(/^(\s+)(?:```)/);
+function indentCodeCompensation(raw: string, text: string, rules: Rules) {
+  const matchIndentToCode = raw.match(rules.other.indentCodeCompensation);
 
   if (matchIndentToCode === null) {
     return text;
@@ -48,7 +40,7 @@ function indentCodeCompensation(raw: string, text: string) {
   return text
     .split('\n')
     .map(node => {
-      const matchIndentInNode = node.match(/^\s+/);
+      const matchIndentInNode = node.match(rules.other.beginningSpace);
       if (matchIndentInNode === null) {
         return node;
       }
@@ -67,13 +59,12 @@ function indentCodeCompensation(raw: string, text: string) {
 /**
  * Tokenizer
  */
-export class _Tokenizer {
-  options: MarkedOptions;
-  // TODO: Fix this rules type
-  rules: any;
-  lexer!: _Lexer;
+export class _Tokenizer<ParserOutput = string, RendererOutput = string> {
+  options: MarkedOptions<ParserOutput, RendererOutput>;
+  rules!: Rules; // set by the lexer
+  lexer!: _Lexer<ParserOutput, RendererOutput>; // set by the lexer
 
-  constructor(options?: MarkedOptions) {
+  constructor(options?: MarkedOptions<ParserOutput, RendererOutput>) {
     this.options = options || _defaults;
   }
 
@@ -82,7 +73,7 @@ export class _Tokenizer {
     if (cap && cap[0].length > 0) {
       return {
         type: 'space',
-        raw: cap[0]
+        raw: cap[0],
       };
     }
   }
@@ -90,14 +81,14 @@ export class _Tokenizer {
   code(src: string): Tokens.Code | undefined {
     const cap = this.rules.block.code.exec(src);
     if (cap) {
-      const text = cap[0].replace(/^ {1,4}/gm, '');
+      const text = cap[0].replace(this.rules.other.codeRemoveIndent, '');
       return {
         type: 'code',
         raw: cap[0],
         codeBlockStyle: 'indented',
         text: !this.options.pedantic
           ? rtrim(text, '\n')
-          : text
+          : text,
       };
     }
   }
@@ -106,13 +97,13 @@ export class _Tokenizer {
     const cap = this.rules.block.fences.exec(src);
     if (cap) {
       const raw = cap[0];
-      const text = indentCodeCompensation(raw, cap[3] || '');
+      const text = indentCodeCompensation(raw, cap[3] || '', this.rules);
 
       return {
         type: 'code',
         raw,
-        lang: cap[2] ? cap[2].trim().replace(this.rules.inline._escapes, '$1') : cap[2],
-        text
+        lang: cap[2] ? cap[2].trim().replace(this.rules.inline.anyPunctuation, '$1') : cap[2],
+        text,
       };
     }
   }
@@ -123,11 +114,11 @@ export class _Tokenizer {
       let text = cap[2].trim();
 
       // remove trailing #s
-      if (/#$/.test(text)) {
+      if (this.rules.other.endingHash.test(text)) {
         const trimmed = rtrim(text, '#');
         if (this.options.pedantic) {
           text = trimmed.trim();
-        } else if (!trimmed || / $/.test(trimmed)) {
+        } else if (!trimmed || this.rules.other.endingSpaceChar.test(trimmed)) {
           // CommonMark requires space before trailing #s
           text = trimmed.trim();
         }
@@ -138,7 +129,7 @@ export class _Tokenizer {
         raw: cap[0],
         depth: cap[1].length,
         text,
-        tokens: this.lexer.inline(text)
+        tokens: this.lexer.inline(text),
       };
     }
   }
@@ -148,7 +139,7 @@ export class _Tokenizer {
     if (cap) {
       return {
         type: 'hr',
-        raw: cap[0]
+        raw: rtrim(cap[0], '\n'),
       };
     }
   }
@@ -156,16 +147,83 @@ export class _Tokenizer {
   blockquote(src: string): Tokens.Blockquote | undefined {
     const cap = this.rules.block.blockquote.exec(src);
     if (cap) {
-      const text = cap[0].replace(/^ *>[ \t]?/gm, '');
-      const top = this.lexer.state.top;
-      this.lexer.state.top = true;
-      const tokens = this.lexer.blockTokens(text);
-      this.lexer.state.top = top;
+      let lines = rtrim(cap[0], '\n').split('\n');
+      let raw = '';
+      let text = '';
+      const tokens: Token[] = [];
+
+      while (lines.length > 0) {
+        let inBlockquote = false;
+        const currentLines = [];
+
+        let i;
+        for (i = 0; i < lines.length; i++) {
+          // get lines up to a continuation
+          if (this.rules.other.blockquoteStart.test(lines[i])) {
+            currentLines.push(lines[i]);
+            inBlockquote = true;
+          } else if (!inBlockquote) {
+            currentLines.push(lines[i]);
+          } else {
+            break;
+          }
+        }
+        lines = lines.slice(i);
+
+        const currentRaw = currentLines.join('\n');
+        const currentText = currentRaw
+          // precede setext continuation with 4 spaces so it isn't a setext
+          .replace(this.rules.other.blockquoteSetextReplace, '\n    $1')
+          .replace(this.rules.other.blockquoteSetextReplace2, '');
+        raw = raw ? `${raw}\n${currentRaw}` : currentRaw;
+        text = text ? `${text}\n${currentText}` : currentText;
+
+        // parse blockquote lines as top level tokens
+        // merge paragraphs if this is a continuation
+        const top = this.lexer.state.top;
+        this.lexer.state.top = true;
+        this.lexer.blockTokens(currentText, tokens, true);
+        this.lexer.state.top = top;
+
+        // if there is no continuation then we are done
+        if (lines.length === 0) {
+          break;
+        }
+
+        const lastToken = tokens.at(-1);
+
+        if (lastToken?.type === 'code') {
+          // blockquote continuation cannot be preceded by a code block
+          break;
+        } else if (lastToken?.type === 'blockquote') {
+          // include continuation in nested blockquote
+          const oldToken = lastToken as Tokens.Blockquote;
+          const newText = oldToken.raw + '\n' + lines.join('\n');
+          const newToken = this.blockquote(newText)!;
+          tokens[tokens.length - 1] = newToken;
+
+          raw = raw.substring(0, raw.length - oldToken.raw.length) + newToken.raw;
+          text = text.substring(0, text.length - oldToken.text.length) + newToken.text;
+          break;
+        } else if (lastToken?.type === 'list') {
+          // include continuation in nested list
+          const oldToken = lastToken as Tokens.List;
+          const newText = oldToken.raw + '\n' + lines.join('\n');
+          const newToken = this.list(newText)!;
+          tokens[tokens.length - 1] = newToken;
+
+          raw = raw.substring(0, raw.length - lastToken.raw.length) + newToken.raw;
+          text = text.substring(0, text.length - oldToken.raw.length) + newToken.raw;
+          lines = newText.substring(tokens.at(-1)!.raw.length).split('\n');
+          continue;
+        }
+      }
+
       return {
         type: 'blockquote',
-        raw: cap[0],
+        raw,
         tokens,
-        text
+        text,
       };
     }
   }
@@ -182,7 +240,7 @@ export class _Tokenizer {
         ordered: isordered,
         start: isordered ? +bull.slice(0, -1) : '',
         loose: false,
-        items: [] as Tokens.ListItem[]
+        items: [],
       };
 
       bull = isordered ? `\\d{1,9}\\${bull.slice(-1)}` : `\\${bull}`;
@@ -192,13 +250,13 @@ export class _Tokenizer {
       }
 
       // Get next list item
-      const itemRegex = new RegExp(`^( {0,3}${bull})((?:[\t ][^\\n]*)?(?:\\n|$))`);
-      let raw = '';
-      let itemContents = '';
+      const itemRegex = this.rules.other.listItemRegex(bull);
       let endsWithBlankLine = false;
       // Check if current bullet point can start a new List Item
       while (src) {
         let endEarly = false;
+        let raw = '';
+        let itemContents = '';
         if (!(cap = itemRegex.exec(src))) {
           break;
         }
@@ -207,45 +265,52 @@ export class _Tokenizer {
           break;
         }
 
-        raw = cap[0] as string;
+        raw = cap[0];
         src = src.substring(raw.length);
 
-        let line = cap[2].split('\n', 1)[0].replace(/^\t+/, (t: string) => ' '.repeat(3 * t.length)) as string;
+        let line = expandTabs(cap[2].split('\n', 1)[0], cap[1].length);
         let nextLine = src.split('\n', 1)[0];
+        let blankLine = !line.trim();
 
         let indent = 0;
         if (this.options.pedantic) {
           indent = 2;
-          itemContents = line.trimLeft();
+          itemContents = line.trimStart();
+        } else if (blankLine) {
+          indent = cap[1].length + 1;
         } else {
-          indent = cap[2].search(/[^ ]/); // Find first non-space char
+          indent = line.search(this.rules.other.nonSpaceChar); // Find first non-space char
           indent = indent > 4 ? 1 : indent; // Treat indented code blocks (> 4 spaces) as having only 1 indent
           itemContents = line.slice(indent);
           indent += cap[1].length;
         }
 
-        let blankLine = false;
-
-        if (!line && /^ *$/.test(nextLine)) { // Items begin with at most one blank line
+        if (blankLine && this.rules.other.blankLine.test(nextLine)) { // Items begin with at most one blank line
           raw += nextLine + '\n';
           src = src.substring(nextLine.length + 1);
           endEarly = true;
         }
 
         if (!endEarly) {
-          const nextBulletRegex = new RegExp(`^ {0,${Math.min(3, indent - 1)}}(?:[*+-]|\\d{1,9}[.)])((?:[ \t][^\\n]*)?(?:\\n|$))`);
-          const hrRegex = new RegExp(`^ {0,${Math.min(3, indent - 1)}}((?:- *){3,}|(?:_ *){3,}|(?:\\* *){3,})(?:\\n+|$)`);
-          const fencesBeginRegex = new RegExp(`^ {0,${Math.min(3, indent - 1)}}(?:\`\`\`|~~~)`);
-          const headingBeginRegex = new RegExp(`^ {0,${Math.min(3, indent - 1)}}#`);
+          const nextBulletRegex = this.rules.other.nextBulletRegex(indent);
+          const hrRegex = this.rules.other.hrRegex(indent);
+          const fencesBeginRegex = this.rules.other.fencesBeginRegex(indent);
+          const headingBeginRegex = this.rules.other.headingBeginRegex(indent);
+          const htmlBeginRegex = this.rules.other.htmlBeginRegex(indent);
+          const blockquoteBeginRegex = this.rules.other.blockquoteBeginRegex(indent);
 
           // Check if following lines should be included in List Item
           while (src) {
             const rawLine = src.split('\n', 1)[0];
+            let nextLineWithoutTabs;
             nextLine = rawLine;
 
             // Re-align to follow commonmark nesting rules
             if (this.options.pedantic) {
-              nextLine = nextLine.replace(/^ {1,4}(?=( {4})*[^ ])/g, '  ');
+              nextLine = nextLine.replace(this.rules.other.listReplaceNesting, '  ');
+              nextLineWithoutTabs = nextLine;
+            } else {
+              nextLineWithoutTabs = nextLine.replace(this.rules.other.tabCharGlobal, '    ');
             }
 
             // End list item if found code fences
@@ -258,18 +323,28 @@ export class _Tokenizer {
               break;
             }
 
+            // End list item if found start of html block
+            if (htmlBeginRegex.test(nextLine)) {
+              break;
+            }
+
+            // End list item if found start of blockquote
+            if (blockquoteBeginRegex.test(nextLine)) {
+              break;
+            }
+
             // End list item if found start of new bullet
             if (nextBulletRegex.test(nextLine)) {
               break;
             }
 
             // Horizontal rule found
-            if (hrRegex.test(src)) {
+            if (hrRegex.test(nextLine)) {
               break;
             }
 
-            if (nextLine.search(/[^ ]/) >= indent || !nextLine.trim()) { // Dedent if possible
-              itemContents += '\n' + nextLine.slice(indent);
+            if (nextLineWithoutTabs.search(this.rules.other.nonSpaceChar) >= indent || !nextLine.trim()) { // Dedent if possible
+              itemContents += '\n' + nextLineWithoutTabs.slice(indent);
             } else {
               // not enough indentation
               if (blankLine) {
@@ -277,7 +352,7 @@ export class _Tokenizer {
               }
 
               // paragraph continuation unless last line was a different block level element
-              if (line.search(/[^ ]/) >= 4) { // indented code block
+              if (line.replace(this.rules.other.tabCharGlobal, '    ').search(this.rules.other.nonSpaceChar) >= 4) { // indented code block
                 break;
               }
               if (fencesBeginRegex.test(line)) {
@@ -293,13 +368,11 @@ export class _Tokenizer {
               itemContents += '\n' + nextLine;
             }
 
-            if (!blankLine && !nextLine.trim()) { // Check if current line is blank
-              blankLine = true;
-            }
+            blankLine = !nextLine.trim();
 
             raw += rawLine + '\n';
             src = src.substring(rawLine.length + 1);
-            line = nextLine.slice(indent);
+            line = nextLineWithoutTabs.slice(indent);
           }
         }
 
@@ -307,49 +380,83 @@ export class _Tokenizer {
           // If the previous item ended with a blank line, the list is loose
           if (endsWithBlankLine) {
             list.loose = true;
-          } else if (/\n *\n *$/.test(raw)) {
+          } else if (this.rules.other.doubleBlankLine.test(raw)) {
             endsWithBlankLine = true;
-          }
-        }
-
-        let istask: RegExpExecArray | null = null;
-        let ischecked: boolean | undefined;
-        // Check for task list items
-        if (this.options.gfm) {
-          istask = /^\[[ xX]\] /.exec(itemContents);
-          if (istask) {
-            ischecked = istask[0] !== '[ ] ';
-            itemContents = itemContents.replace(/^\[[ xX]\] +/, '');
           }
         }
 
         list.items.push({
           type: 'list_item',
           raw,
-          task: !!istask,
-          checked: ischecked,
+          task: !!this.options.gfm && this.rules.other.listIsTask.test(itemContents),
           loose: false,
           text: itemContents,
-          tokens: []
+          tokens: [],
         });
 
         list.raw += raw;
       }
 
       // Do not consume newlines at end of final item. Alternatively, make itemRegex *start* with any newlines to simplify/speed up endsWithBlankLine logic
-      list.items[list.items.length - 1].raw = raw.trimRight();
-      (list.items[list.items.length - 1] as Tokens.ListItem).text = itemContents.trimRight();
-      list.raw = list.raw.trimRight();
+      const lastItem = list.items.at(-1);
+      if (lastItem) {
+        lastItem.raw = lastItem.raw.trimEnd();
+        lastItem.text = lastItem.text.trimEnd();
+      } else {
+        // not a list since there were no items
+        return;
+      }
+      list.raw = list.raw.trimEnd();
 
       // Item child tokens handled here at end because we needed to have the final item to trim it first
-      for (let i = 0; i < list.items.length; i++) {
+      for (const item of list.items) {
         this.lexer.state.top = false;
-        list.items[i].tokens = this.lexer.blockTokens(list.items[i].text, []);
+        item.tokens = this.lexer.blockTokens(item.text, []);
+        if (item.task) {
+          // Remove checkbox markdown from item tokens
+          item.text = item.text.replace(this.rules.other.listReplaceTask, '');
+          if (item.tokens[0]?.type === 'text' || item.tokens[0]?.type === 'paragraph') {
+            item.tokens[0].raw = item.tokens[0].raw.replace(this.rules.other.listReplaceTask, '');
+            item.tokens[0].text = item.tokens[0].text.replace(this.rules.other.listReplaceTask, '');
+            for (let i = this.lexer.inlineQueue.length - 1; i >= 0; i--) {
+              if (this.rules.other.listIsTask.test(this.lexer.inlineQueue[i].src)) {
+                this.lexer.inlineQueue[i].src = this.lexer.inlineQueue[i].src.replace(this.rules.other.listReplaceTask, '');
+                break;
+              }
+            }
+          }
+
+          const taskRaw = this.rules.other.listTaskCheckbox.exec(item.raw);
+          if (taskRaw) {
+            const checkboxToken: Tokens.Checkbox = {
+              type: 'checkbox',
+              raw: taskRaw[0] + ' ',
+              checked: taskRaw[0] !== '[ ]',
+            };
+            item.checked = checkboxToken.checked;
+            if (list.loose) {
+              if (item.tokens[0] && ['paragraph', 'text'].includes(item.tokens[0].type) && 'tokens' in item.tokens[0] && item.tokens[0].tokens) {
+                item.tokens[0].raw = checkboxToken.raw + item.tokens[0].raw;
+                item.tokens[0].text = checkboxToken.raw + item.tokens[0].text;
+                item.tokens[0].tokens.unshift(checkboxToken);
+              } else {
+                item.tokens.unshift({
+                  type: 'paragraph',
+                  raw: checkboxToken.raw,
+                  text: checkboxToken.raw,
+                  tokens: [checkboxToken],
+                });
+              }
+            } else {
+              item.tokens.unshift(checkboxToken);
+            }
+          }
+        }
 
         if (!list.loose) {
           // Check if list should be loose
-          const spacers = list.items[i].tokens.filter(t => t.type === 'space');
-          const hasMultipleLineBreaks = spacers.length > 0 && spacers.some(t => /\n.*\n/.test(t.raw));
+          const spacers = item.tokens.filter(t => t.type === 'space');
+          const hasMultipleLineBreaks = spacers.length > 0 && spacers.some(t => this.rules.other.anyLine.test(t.raw));
 
           list.loose = hasMultipleLineBreaks;
         }
@@ -357,8 +464,13 @@ export class _Tokenizer {
 
       // Set all items to loose if list is loose
       if (list.loose) {
-        for (let i = 0; i < list.items.length; i++) {
-          list.items[i].loose = true;
+        for (const item of list.items) {
+          item.loose = true;
+          for (const token of item.tokens) {
+            if (token.type === 'text') {
+              token.type = 'paragraph';
+            }
+          }
         }
       }
 
@@ -366,24 +478,16 @@ export class _Tokenizer {
     }
   }
 
-  html(src: string): Tokens.HTML | Tokens.Paragraph | undefined {
+  html(src: string): Tokens.HTML | undefined {
     const cap = this.rules.block.html.exec(src);
     if (cap) {
-      const token: Tokens.HTML | Tokens.Paragraph = {
+      const token: Tokens.HTML = {
         type: 'html',
         block: true,
         raw: cap[0],
-        pre: !this.options.sanitizer
-          && (cap[1] === 'pre' || cap[1] === 'script' || cap[1] === 'style'),
-        text: cap[0]
+        pre: cap[1] === 'pre' || cap[1] === 'script' || cap[1] === 'style',
+        text: cap[0],
       };
-      if (this.options.sanitize) {
-        const text = this.options.sanitizer ? this.options.sanitizer(cap[0]) : escape(cap[0]);
-        const paragraph = token as unknown as Tokens.Paragraph;
-        paragraph.type = 'paragraph';
-        paragraph.text = text;
-        paragraph.tokens = this.lexer.inline(text);
-      }
       return token;
     }
   }
@@ -391,88 +495,92 @@ export class _Tokenizer {
   def(src: string): Tokens.Def | undefined {
     const cap = this.rules.block.def.exec(src);
     if (cap) {
-      const tag = cap[1].toLowerCase().replace(/\s+/g, ' ');
-      const href = cap[2] ? cap[2].replace(/^<(.*)>$/, '$1').replace(this.rules.inline._escapes, '$1') : '';
-      const title = cap[3] ? cap[3].substring(1, cap[3].length - 1).replace(this.rules.inline._escapes, '$1') : cap[3];
+      const tag = cap[1].toLowerCase().replace(this.rules.other.multipleSpaceGlobal, ' ');
+      const href = cap[2] ? cap[2].replace(this.rules.other.hrefBrackets, '$1').replace(this.rules.inline.anyPunctuation, '$1') : '';
+      const title = cap[3] ? cap[3].substring(1, cap[3].length - 1).replace(this.rules.inline.anyPunctuation, '$1') : cap[3];
       return {
         type: 'def',
         tag,
         raw: cap[0],
         href,
-        title
+        title,
       };
     }
   }
 
   table(src: string): Tokens.Table | undefined {
     const cap = this.rules.block.table.exec(src);
-    if (cap) {
-      const item: Tokens.Table = {
-        type: 'table',
-        raw: cap[0],
-        header: splitCells(cap[1]).map(c => {
-          return { text: c, tokens: [] };
-        }),
-        align: cap[2].replace(/^ *|\| *$/g, '').split(/ *\| */),
-        rows: cap[3] && cap[3].trim() ? cap[3].replace(/\n[ \t]*$/, '').split('\n') : []
-      };
+    if (!cap) {
+      return;
+    }
 
-      if (item.header.length === item.align.length) {
-        let l = item.align.length;
-        let i, j, k, row;
-        for (i = 0; i < l; i++) {
-          const align = item.align[i];
-          if (align) {
-            if (/^ *-+: *$/.test(align)) {
-              item.align[i] = 'right';
-            } else if (/^ *:-+: *$/.test(align)) {
-              item.align[i] = 'center';
-            } else if (/^ *:-+ *$/.test(align)) {
-              item.align[i] = 'left';
-            } else {
-              item.align[i] = null;
-            }
-          }
-        }
+    if (!this.rules.other.tableDelimiter.test(cap[2])) {
+      // delimiter row must have a pipe (|) or colon (:) otherwise it is a setext heading
+      return;
+    }
 
-        l = item.rows.length;
-        for (i = 0; i < l; i++) {
-          item.rows[i] = splitCells(item.rows[i] as unknown as string, item.header.length).map(c => {
-            return { text: c, tokens: [] };
-          });
-        }
+    const headers = splitCells(cap[1]);
+    const aligns = cap[2].replace(this.rules.other.tableAlignChars, '').split('|');
+    const rows = cap[3]?.trim() ? cap[3].replace(this.rules.other.tableRowBlankLine, '').split('\n') : [];
 
-        // parse child tokens inside headers and cells
+    const item: Tokens.Table = {
+      type: 'table',
+      raw: cap[0],
+      header: [],
+      align: [],
+      rows: [],
+    };
 
-        // header child tokens
-        l = item.header.length;
-        for (j = 0; j < l; j++) {
-          item.header[j].tokens = this.lexer.inline(item.header[j].text);
-        }
+    if (headers.length !== aligns.length) {
+      // header and align columns must be equal, rows can be different.
+      return;
+    }
 
-        // cell child tokens
-        l = item.rows.length;
-        for (j = 0; j < l; j++) {
-          row = item.rows[j];
-          for (k = 0; k < row.length; k++) {
-            row[k].tokens = this.lexer.inline(row[k].text);
-          }
-        }
-
-        return item;
+    for (const align of aligns) {
+      if (this.rules.other.tableAlignRight.test(align)) {
+        item.align.push('right');
+      } else if (this.rules.other.tableAlignCenter.test(align)) {
+        item.align.push('center');
+      } else if (this.rules.other.tableAlignLeft.test(align)) {
+        item.align.push('left');
+      } else {
+        item.align.push(null);
       }
     }
+
+    for (let i = 0; i < headers.length; i++) {
+      item.header.push({
+        text: headers[i],
+        tokens: this.lexer.inline(headers[i]),
+        header: true,
+        align: item.align[i],
+      });
+    }
+
+    for (const row of rows) {
+      item.rows.push(splitCells(row, item.header.length).map((cell, i) => {
+        return {
+          text: cell,
+          tokens: this.lexer.inline(cell),
+          header: false,
+          align: item.align[i],
+        };
+      }));
+    }
+
+    return item;
   }
 
   lheading(src: string): Tokens.Heading | undefined {
     const cap = this.rules.block.lheading.exec(src);
     if (cap) {
+      const text = cap[1].trim();
       return {
         type: 'heading',
         raw: cap[0],
         depth: cap[2].charAt(0) === '=' ? 1 : 2,
-        text: cap[1],
-        tokens: this.lexer.inline(cap[1])
+        text,
+        tokens: this.lexer.inline(text),
       };
     }
   }
@@ -487,7 +595,7 @@ export class _Tokenizer {
         type: 'paragraph',
         raw: cap[0],
         text,
-        tokens: this.lexer.inline(text)
+        tokens: this.lexer.inline(text),
       };
     }
   }
@@ -499,7 +607,7 @@ export class _Tokenizer {
         type: 'text',
         raw: cap[0],
         text: cap[0],
-        tokens: this.lexer.inline(cap[0])
+        tokens: this.lexer.inline(cap[0]),
       };
     }
   }
@@ -510,7 +618,7 @@ export class _Tokenizer {
       return {
         type: 'escape',
         raw: cap[0],
-        text: escape(cap[1])
+        text: cap[1],
       };
     }
   }
@@ -518,30 +626,24 @@ export class _Tokenizer {
   tag(src: string): Tokens.Tag | undefined {
     const cap = this.rules.inline.tag.exec(src);
     if (cap) {
-      if (!this.lexer.state.inLink && /^<a /i.test(cap[0])) {
+      if (!this.lexer.state.inLink && this.rules.other.startATag.test(cap[0])) {
         this.lexer.state.inLink = true;
-      } else if (this.lexer.state.inLink && /^<\/a>/i.test(cap[0])) {
+      } else if (this.lexer.state.inLink && this.rules.other.endATag.test(cap[0])) {
         this.lexer.state.inLink = false;
       }
-      if (!this.lexer.state.inRawBlock && /^<(pre|code|kbd|script)(\s|>)/i.test(cap[0])) {
+      if (!this.lexer.state.inRawBlock && this.rules.other.startPreScriptTag.test(cap[0])) {
         this.lexer.state.inRawBlock = true;
-      } else if (this.lexer.state.inRawBlock && /^<\/(pre|code|kbd|script)(\s|>)/i.test(cap[0])) {
+      } else if (this.lexer.state.inRawBlock && this.rules.other.endPreScriptTag.test(cap[0])) {
         this.lexer.state.inRawBlock = false;
       }
 
       return {
-        type: this.options.sanitize
-          ? 'text'
-          : 'html',
+        type: 'html',
         raw: cap[0],
         inLink: this.lexer.state.inLink,
         inRawBlock: this.lexer.state.inRawBlock,
         block: false,
-        text: this.options.sanitize
-          ? (this.options.sanitizer
-            ? this.options.sanitizer(cap[0])
-            : escape(cap[0]))
-          : cap[0]
+        text: cap[0],
       };
     }
   }
@@ -550,9 +652,9 @@ export class _Tokenizer {
     const cap = this.rules.inline.link.exec(src);
     if (cap) {
       const trimmedUrl = cap[2].trim();
-      if (!this.options.pedantic && /^</.test(trimmedUrl)) {
+      if (!this.options.pedantic && this.rules.other.startAngleBracket.test(trimmedUrl)) {
         // commonmark requires matching angle brackets
-        if (!(/>$/.test(trimmedUrl))) {
+        if (!(this.rules.other.endAngleBracket.test(trimmedUrl))) {
           return;
         }
 
@@ -564,6 +666,11 @@ export class _Tokenizer {
       } else {
         // find closing parenthesis
         const lastParenIndex = findClosingBracket(cap[2], '()');
+        if (lastParenIndex === -2) {
+          // more open parens than closed
+          return;
+        }
+
         if (lastParenIndex > -1) {
           const start = cap[0].indexOf('!') === 0 ? 5 : 4;
           const linkLen = start + cap[1].length + lastParenIndex;
@@ -576,7 +683,7 @@ export class _Tokenizer {
       let title = '';
       if (this.options.pedantic) {
         // split pedantic href and title
-        const link = /^([^'"]*[^\s])\s+(['"])(.*)\2/.exec(href);
+        const link = this.rules.other.pedanticHrefTitle.exec(href);
 
         if (link) {
           href = link[1];
@@ -587,8 +694,8 @@ export class _Tokenizer {
       }
 
       href = href.trim();
-      if (/^</.test(href)) {
-        if (this.options.pedantic && !(/>$/.test(trimmedUrl))) {
+      if (this.rules.other.startAngleBracket.test(href)) {
+        if (this.options.pedantic && !(this.rules.other.endAngleBracket.test(trimmedUrl))) {
           // pedantic allows starting angle bracket without ending angle bracket
           href = href.slice(1);
         } else {
@@ -596,9 +703,9 @@ export class _Tokenizer {
         }
       }
       return outputLink(cap, {
-        href: href ? href.replace(this.rules.inline._escapes, '$1') : href,
-        title: title ? title.replace(this.rules.inline._escapes, '$1') : title
-      }, cap[0], this.lexer);
+        href: href ? href.replace(this.rules.inline.anyPunctuation, '$1') : href,
+        title: title ? title.replace(this.rules.inline.anyPunctuation, '$1') : title,
+      }, cap[0], this.lexer, this.rules);
     }
   }
 
@@ -606,41 +713,42 @@ export class _Tokenizer {
     let cap;
     if ((cap = this.rules.inline.reflink.exec(src))
       || (cap = this.rules.inline.nolink.exec(src))) {
-      let link = (cap[2] || cap[1]).replace(/\s+/g, ' ');
-      link = links[link.toLowerCase()];
+      const linkString = (cap[2] || cap[1]).replace(this.rules.other.multipleSpaceGlobal, ' ');
+      const link = links[linkString.toLowerCase()];
       if (!link) {
         const text = cap[0].charAt(0);
         return {
           type: 'text',
           raw: text,
-          text
+          text,
         };
       }
-      return outputLink(cap, link, cap[0], this.lexer);
+      return outputLink(cap, link, cap[0], this.lexer, this.rules);
     }
   }
 
   emStrong(src: string, maskedSrc: string, prevChar = ''): Tokens.Em | Tokens.Strong | undefined {
-    let match = this.rules.inline.emStrong.lDelim.exec(src);
+    let match = this.rules.inline.emStrongLDelim.exec(src);
     if (!match) return;
+    if (!match[1] && !match[2] && !match[3] && !match[4]) return;
 
     // _ can't be between two alphanumerics. \p{L}\p{N} includes non-english alphabet/numbers as well
-    if (match[3] && prevChar.match(/[\p{L}\p{N}]/u)) return;
+    if (match[4] && prevChar.match(this.rules.other.unicodeAlphaNumeric)) return;
 
-    const nextChar = match[1] || match[2] || '';
+    const nextChar = match[1] || match[3] || '';
 
     if (!nextChar || !prevChar || this.rules.inline.punctuation.exec(prevChar)) {
       // unicode Regex counts emoji as 1 char; spread into array for proper count (used multiple times below)
       const lLength = [...match[0]].length - 1;
       let rDelim, rLength, delimTotal = lLength, midDelimTotal = 0;
 
-      const endReg = match[0][0] === '*' ? this.rules.inline.emStrong.rDelimAst : this.rules.inline.emStrong.rDelimUnd;
+      const endReg = match[0][0] === '*' ? this.rules.inline.emStrongRDelimAst : this.rules.inline.emStrongRDelimUnd;
       endReg.lastIndex = 0;
 
       // Clip maskedSrc to same section of string as src (move to lexer?)
       maskedSrc = maskedSrc.slice(-1 * src.length + lLength);
 
-      while ((match = endReg.exec(maskedSrc)) != null) {
+      while ((match = endReg.exec(maskedSrc)) !== null) {
         rDelim = match[1] || match[2] || match[3] || match[4] || match[5] || match[6];
 
         if (!rDelim) continue; // skip single * in __abc*abc__
@@ -663,8 +771,9 @@ export class _Tokenizer {
 
         // Remove extra characters. *a*** -> *a*
         rLength = Math.min(rLength, rLength + delimTotal + midDelimTotal);
-
-        const raw = [...src].slice(0, lLength + match.index + rLength + 1).join('');
+        // char length can be >1 for unicode characters;
+        const lastCharLength = [...match[0]][0].length;
+        const raw = src.slice(0, lLength + match.index + lastCharLength + rLength);
 
         // Create `em` if smallest delimiter has odd char count. *a***
         if (Math.min(lLength, rLength) % 2) {
@@ -673,7 +782,7 @@ export class _Tokenizer {
             type: 'em',
             raw,
             text,
-            tokens: this.lexer.inlineTokens(text)
+            tokens: this.lexer.inlineTokens(text),
           };
         }
 
@@ -683,7 +792,7 @@ export class _Tokenizer {
           type: 'strong',
           raw,
           text,
-          tokens: this.lexer.inlineTokens(text)
+          tokens: this.lexer.inlineTokens(text),
         };
       }
     }
@@ -692,17 +801,16 @@ export class _Tokenizer {
   codespan(src: string): Tokens.Codespan | undefined {
     const cap = this.rules.inline.code.exec(src);
     if (cap) {
-      let text = cap[2].replace(/\n/g, ' ');
-      const hasNonSpaceChars = /[^ ]/.test(text);
-      const hasSpaceCharsOnBothEnds = /^ /.test(text) && / $/.test(text);
+      let text = cap[2].replace(this.rules.other.newLineCharGlobal, ' ');
+      const hasNonSpaceChars = this.rules.other.nonSpaceChar.test(text);
+      const hasSpaceCharsOnBothEnds = this.rules.other.startingSpaceChar.test(text) && this.rules.other.endingSpaceChar.test(text);
       if (hasNonSpaceChars && hasSpaceCharsOnBothEnds) {
         text = text.substring(1, text.length - 1);
       }
-      text = escape(text, true);
       return {
         type: 'codespan',
         raw: cap[0],
-        text
+        text,
       };
     }
   }
@@ -712,32 +820,73 @@ export class _Tokenizer {
     if (cap) {
       return {
         type: 'br',
-        raw: cap[0]
-      };
-    }
-  }
-
-  del(src: string): Tokens.Del | undefined {
-    const cap = this.rules.inline.del.exec(src);
-    if (cap) {
-      return {
-        type: 'del',
         raw: cap[0],
-        text: cap[2],
-        tokens: this.lexer.inlineTokens(cap[2])
       };
     }
   }
 
-  autolink(src: string, mangle: (cap: string) => string): Tokens.Link | undefined {
+  del(src: string, maskedSrc: string, prevChar = ''): Tokens.Del | undefined {
+    let match = this.rules.inline.delLDelim.exec(src);
+    if (!match) return;
+
+    const nextChar = match[1] || '';
+
+    if (!nextChar || !prevChar || this.rules.inline.punctuation.exec(prevChar)) {
+      // unicode Regex counts emoji as 1 char; spread into array for proper count
+      const lLength = [...match[0]].length - 1;
+      let rDelim, rLength, delimTotal = lLength;
+
+      const endReg = this.rules.inline.delRDelim;
+      endReg.lastIndex = 0;
+
+      // Clip maskedSrc to same section of string as src
+      maskedSrc = maskedSrc.slice(-1 * src.length + lLength);
+
+      while ((match = endReg.exec(maskedSrc)) !== null) {
+        rDelim = match[1] || match[2] || match[3] || match[4] || match[5] || match[6];
+
+        if (!rDelim) continue;
+
+        rLength = [...rDelim].length;
+
+        if (rLength !== lLength) continue;
+
+        if (match[3] || match[4]) { // found another Left Delim
+          delimTotal += rLength;
+          continue;
+        }
+
+        delimTotal -= rLength;
+
+        if (delimTotal > 0) continue; // Haven't found enough closing delimiters
+
+        // Remove extra characters
+        rLength = Math.min(rLength, rLength + delimTotal);
+        // char length can be >1 for unicode characters
+        const lastCharLength = [...match[0]][0].length;
+        const raw = src.slice(0, lLength + match.index + lastCharLength + rLength);
+
+        // Create del token - only single ~ or double ~~ supported
+        const text = raw.slice(lLength, -lLength);
+        return {
+          type: 'del',
+          raw,
+          text,
+          tokens: this.lexer.inlineTokens(text),
+        };
+      }
+    }
+  }
+
+  autolink(src: string): Tokens.Link | undefined {
     const cap = this.rules.inline.autolink.exec(src);
     if (cap) {
       let text, href;
       if (cap[2] === '@') {
-        text = escape(this.options.mangle ? mangle(cap[1]) : cap[1]);
+        text = cap[1];
         href = 'mailto:' + text;
       } else {
-        text = escape(cap[1]);
+        text = cap[1];
         href = text;
       }
 
@@ -750,28 +899,28 @@ export class _Tokenizer {
           {
             type: 'text',
             raw: text,
-            text
-          }
-        ]
+            text,
+          },
+        ],
       };
     }
   }
 
-  url(src: string, mangle: (cap: string) => string): Tokens.Link | undefined {
+  url(src: string): Tokens.Link | undefined {
     let cap;
     if (cap = this.rules.inline.url.exec(src)) {
       let text, href;
       if (cap[2] === '@') {
-        text = escape(this.options.mangle ? mangle(cap[0]) : cap[0]);
+        text = cap[0];
         href = 'mailto:' + text;
       } else {
         // do extended autolink path validation
         let prevCapZero;
         do {
           prevCapZero = cap[0];
-          cap[0] = this.rules.inline._backpedal.exec(cap[0])[0];
+          cap[0] = this.rules.inline._backpedal.exec(cap[0])?.[0] ?? '';
         } while (prevCapZero !== cap[0]);
-        text = escape(cap[0]);
+        text = cap[0];
         if (cap[1] === 'www.') {
           href = 'http://' + cap[0];
         } else {
@@ -787,26 +936,22 @@ export class _Tokenizer {
           {
             type: 'text',
             raw: text,
-            text
-          }
-        ]
+            text,
+          },
+        ],
       };
     }
   }
 
-  inlineText(src: string, smartypants: (cap: string) => string): Tokens.Text | undefined {
+  inlineText(src: string): Tokens.Text | undefined {
     const cap = this.rules.inline.text.exec(src);
     if (cap) {
-      let text;
-      if (this.lexer.state.inRawBlock) {
-        text = this.options.sanitize ? (this.options.sanitizer ? this.options.sanitizer(cap[0]) : escape(cap[0])) : cap[0];
-      } else {
-        text = escape(this.options.smartypants ? smartypants(cap[0]) : cap[0]);
-      }
+      const escaped = this.lexer.state.inRawBlock;
       return {
         type: 'text',
         raw: cap[0],
-        text
+        text: cap[0],
+        escaped,
       };
     }
   }

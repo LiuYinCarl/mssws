@@ -1,91 +1,116 @@
 import { _defaults } from './defaults.ts';
 import {
   cleanUrl,
-  escape
+  escapeHtmlEntities,
 } from './helpers.ts';
+import { other } from './rules.ts';
 import type { MarkedOptions } from './MarkedOptions.ts';
-import type { _Slugger } from './Slugger.ts';
+import type { Tokens } from './Tokens.ts';
+import type { _Parser } from './Parser.ts';
 
 /**
  * Renderer
  */
-export class _Renderer {
-  options: MarkedOptions;
-  constructor(options?: MarkedOptions) {
+export class _Renderer<ParserOutput = string, RendererOutput = string> {
+  options: MarkedOptions<ParserOutput, RendererOutput>;
+  parser!: _Parser<ParserOutput, RendererOutput>; // set by the parser
+  constructor(options?: MarkedOptions<ParserOutput, RendererOutput>) {
     this.options = options || _defaults;
   }
 
-  code(code: string, infostring: string | undefined, escaped: boolean): string {
-    const lang = (infostring || '').match(/^\S*/)?.[0];
-    if (this.options.highlight) {
-      const out = this.options.highlight(code, lang);
-      if (out != null && out !== code) {
-        escaped = true;
-        code = out;
-      }
-    }
+  space(token: Tokens.Space): RendererOutput {
+    return '' as RendererOutput;
+  }
 
-    code = code.replace(/\n$/, '') + '\n';
+  code({ text, lang, escaped }: Tokens.Code): RendererOutput {
+    const langString = (lang || '').match(other.notSpaceStart)?.[0];
 
-    if (!lang) {
+    const code = text.replace(other.endingNewline, '') + '\n';
+
+    if (!langString) {
       return '<pre><code>'
-        + (escaped ? code : escape(code, true))
-        + '</code></pre>\n';
+        + (escaped ? code : escapeHtmlEntities(code, true))
+        + '</code></pre>\n' as RendererOutput;
     }
 
-    return '<pre><code class="'
-      + this.options.langPrefix
-      + escape(lang)
+    return '<pre><code class="language-'
+      + escapeHtmlEntities(langString)
       + '">'
-      + (escaped ? code : escape(code, true))
-      + '</code></pre>\n';
+      + (escaped ? code : escapeHtmlEntities(code, true))
+      + '</code></pre>\n' as RendererOutput;
   }
 
-  blockquote(quote: string): string {
-    return `<blockquote>\n${quote}</blockquote>\n`;
+  blockquote({ tokens }: Tokens.Blockquote): RendererOutput {
+    const body = this.parser.parse(tokens);
+    return `<blockquote>\n${body}</blockquote>\n` as RendererOutput;
   }
 
-  html(html: string, block?: boolean) : string {
-    return html;
+  html({ text }: Tokens.HTML | Tokens.Tag): RendererOutput {
+    return text as RendererOutput;
   }
 
-  heading(text: string, level: number, raw: string, slugger: _Slugger): string {
-    if (this.options.headerIds) {
-      const id = this.options.headerPrefix + slugger.slug(raw);
-      return `<h${level} id="${id}">${text}</h${level}>\n`;
+  def(token: Tokens.Def): RendererOutput {
+    return '' as RendererOutput;
+  }
+
+  heading({ tokens, depth }: Tokens.Heading): RendererOutput {
+    return `<h${depth}>${this.parser.parseInline(tokens)}</h${depth}>\n` as RendererOutput;
+  }
+
+  hr(token: Tokens.Hr): RendererOutput {
+    return '<hr>\n' as RendererOutput;
+  }
+
+  list(token: Tokens.List): RendererOutput {
+    const ordered = token.ordered;
+    const start = token.start;
+
+    let body = '';
+    for (let j = 0; j < token.items.length; j++) {
+      const item = token.items[j];
+      body += this.listitem(item);
     }
 
-    // ignore IDs
-    return `<h${level}>${text}</h${level}>\n`;
-  }
-
-  hr(): string {
-    return this.options.xhtml ? '<hr/>\n' : '<hr>\n';
-  }
-
-  list(body: string, ordered: boolean, start: number | ''): string {
     const type = ordered ? 'ol' : 'ul';
-    const startatt = (ordered && start !== 1) ? (' start="' + start + '"') : '';
-    return '<' + type + startatt + '>\n' + body + '</' + type + '>\n';
+    const startAttr = (ordered && start !== 1) ? (' start="' + start + '"') : '';
+    return '<' + type + startAttr + '>\n' + body + '</' + type + '>\n' as RendererOutput;
   }
 
-  listitem(text: string, task: boolean, checked: boolean): string {
-    return `<li>${text}</li>\n`;
+  listitem(item: Tokens.ListItem): RendererOutput {
+    return `<li>${this.parser.parse(item.tokens)}</li>\n` as RendererOutput;
   }
 
-  checkbox(checked: boolean): string {
+  checkbox({ checked }: Tokens.Checkbox): RendererOutput {
     return '<input '
       + (checked ? 'checked="" ' : '')
-      + 'disabled="" type="checkbox"'
-      + (this.options.xhtml ? ' /' : '')
-      + '> ';
+      + 'disabled="" type="checkbox"> ' as RendererOutput;
   }
 
-  paragraph(text: string): string {
-    return `<p>${text}</p>\n`;
+  paragraph({ tokens }: Tokens.Paragraph): RendererOutput {
+    return `<p>${this.parser.parseInline(tokens)}</p>\n` as RendererOutput;
   }
 
-  table(header: string, body: string): string {
+  table(token: Tokens.Table): RendererOutput {
+    let header = '';
+
+    // header
+    let cell = '';
+    for (let j = 0; j < token.header.length; j++) {
+      cell += this.tablecell(token.header[j]);
+    }
+    header += this.tablerow({ text: cell as ParserOutput });
+
+    let body = '';
+    for (let j = 0; j < token.rows.length; j++) {
+      const row = token.rows[j];
+
+      cell = '';
+      for (let k = 0; k < row.length; k++) {
+        cell += this.tablecell(row[k]);
+      }
+
+      body += this.tablerow({ text: cell as ParserOutput });
+    }
     if (body) body = `<tbody>${body}</tbody>`;
 
     return '<table>\n'
@@ -93,77 +118,81 @@ export class _Renderer {
       + header
       + '</thead>\n'
       + body
-      + '</table>\n';
+      + '</table>\n' as RendererOutput;
   }
 
-  tablerow(content: string): string {
-    return `<tr>\n${content}</tr>\n`;
+  tablerow({ text }: Tokens.TableRow<ParserOutput>): RendererOutput {
+    return `<tr>\n${text}</tr>\n` as RendererOutput;
   }
 
-  tablecell(content: string, flags: {
-    header: boolean;
-    align: 'center' | 'left' | 'right' | null;
-  }): string {
-    const type = flags.header ? 'th' : 'td';
-    const tag = flags.align
-      ? `<${type} align="${flags.align}">`
+  tablecell(token: Tokens.TableCell): RendererOutput {
+    const content = this.parser.parseInline(token.tokens);
+    const type = token.header ? 'th' : 'td';
+    const tag = token.align
+      ? `<${type} align="${token.align}">`
       : `<${type}>`;
-    return tag + content + `</${type}>\n`;
+    return tag + content + `</${type}>\n` as RendererOutput;
   }
 
   /**
    * span level renderer
    */
-  strong(text: string): string {
-    return `<strong>${text}</strong>`;
+  strong({ tokens }: Tokens.Strong): RendererOutput {
+    return `<strong>${this.parser.parseInline(tokens)}</strong>` as RendererOutput;
   }
 
-  em(text: string): string {
-    return `<em>${text}</em>`;
+  em({ tokens }: Tokens.Em): RendererOutput {
+    return `<em>${this.parser.parseInline(tokens)}</em>` as RendererOutput;
   }
 
-  codespan(text: string): string {
-    return `<code>${text}</code>`;
+  codespan({ text }: Tokens.Codespan): RendererOutput {
+    return `<code>${escapeHtmlEntities(text, true)}</code>` as RendererOutput;
   }
 
-  br(): string {
-    return this.options.xhtml ? '<br/>' : '<br>';
+  br(token: Tokens.Br): RendererOutput {
+    return '<br>' as RendererOutput;
   }
 
-  del(text: string): string {
-    return `<del>${text}</del>`;
+  del({ tokens }: Tokens.Del): RendererOutput {
+    return `<del>${this.parser.parseInline(tokens)}</del>` as RendererOutput;
   }
 
-  link(href: string, title: string | null | undefined, text: string): string {
-    const cleanHref = cleanUrl(this.options.sanitize, this.options.baseUrl, href);
+  link({ href, title, tokens }: Tokens.Link): RendererOutput {
+    const text = this.parser.parseInline(tokens) as string;
+    const cleanHref = cleanUrl(href);
     if (cleanHref === null) {
-      return text;
+      return text as RendererOutput;
     }
     href = cleanHref;
     let out = '<a href="' + href + '"';
     if (title) {
-      out += ' title="' + title + '"';
+      out += ' title="' + (escapeHtmlEntities(title)) + '"';
     }
     out += '>' + text + '</a>';
-    return out;
+    return out as RendererOutput;
   }
 
-  image(href: string, title: string | null, text: string): string {
-    const cleanHref = cleanUrl(this.options.sanitize, this.options.baseUrl, href);
+  image({ href, title, text, tokens }: Tokens.Image): RendererOutput {
+    if (tokens) {
+      text = this.parser.parseInline(tokens, this.parser.textRenderer) as string;
+    }
+    const cleanHref = cleanUrl(href);
     if (cleanHref === null) {
-      return text;
+      return escapeHtmlEntities(text) as RendererOutput;
     }
     href = cleanHref;
 
-    let out = `<img src="${href}" alt="${text}"`;
+    let out = `<img src="${href}" alt="${escapeHtmlEntities(text)}"`;
     if (title) {
-      out += ` title="${title}"`;
+      out += ` title="${escapeHtmlEntities(title)}"`;
     }
-    out += this.options.xhtml ? '/>' : '>';
-    return out;
+    out += '>';
+    return out as RendererOutput;
   }
 
-  text(text: string) : string {
-    return text;
+  text(token: Tokens.Text | Tokens.Escape): RendererOutput {
+    return 'tokens' in token && token.tokens
+      ? this.parser.parseInline(token.tokens) as unknown as RendererOutput
+      : ('escaped' in token && token.escaped ? token.text as RendererOutput : escapeHtmlEntities(token.text) as RendererOutput);
   }
 }

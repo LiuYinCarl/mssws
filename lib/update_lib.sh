@@ -25,6 +25,7 @@ cd ..
 
 cd ./marked || exit
 rm -rf .git
+rm -rf test
 cd ..
 
 cd texme || exit

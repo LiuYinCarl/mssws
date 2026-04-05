@@ -3,11 +3,7 @@ import type { _Parser } from './Parser.ts';
 import type { _Lexer } from './Lexer.ts';
 import type { _Renderer } from './Renderer.ts';
 import type { _Tokenizer } from './Tokenizer.ts';
-
-export interface SluggerOptions {
-  /** Generates the next unique slug without updating the internal accumulator. */
-  dryrun?: boolean;
-}
+import type { _Hooks } from './Hooks.ts';
 
 export interface TokenizerThis {
   lexer: _Lexer;
@@ -20,152 +16,94 @@ export type TokenizerStartFunction = (this: TokenizerThis, src: string) => numbe
 export interface TokenizerExtension {
   name: string;
   level: 'block' | 'inline';
-  start?: TokenizerStartFunction | undefined;
+  start?: TokenizerStartFunction;
   tokenizer: TokenizerExtensionFunction;
-  childTokens?: string[] | undefined;
+  childTokens?: string[];
 }
 
-export interface RendererThis {
-  parser: _Parser;
+export interface RendererThis<ParserOutput = string, RendererOutput = string> {
+  parser: _Parser<ParserOutput, RendererOutput>;
 }
 
-export type RendererExtensionFunction = (this: RendererThis, token: Tokens.Generic) => string | false | undefined;
+export type RendererExtensionFunction<ParserOutput = string, RendererOutput = string> = (this: RendererThis<ParserOutput, RendererOutput>, token: Tokens.Generic) => RendererOutput | false | undefined;
 
-export interface RendererExtension {
+export interface RendererExtension<ParserOutput = string, RendererOutput = string> {
   name: string;
-  renderer: RendererExtensionFunction;
+  renderer: RendererExtensionFunction<ParserOutput, RendererOutput>;
 }
 
-export type TokenizerAndRendererExtension = TokenizerExtension | RendererExtension | (TokenizerExtension & RendererExtension);
+export type TokenizerAndRendererExtension<ParserOutput = string, RendererOutput = string> = TokenizerExtension | RendererExtension<ParserOutput, RendererOutput> | (TokenizerExtension & RendererExtension<ParserOutput, RendererOutput>);
 
-type RendererApi = Omit<_Renderer, 'constructor' | 'options'>;
-type RendererObject = {
-  [K in keyof RendererApi]?: (...args: Parameters<RendererApi[K]>) => ReturnType<RendererApi[K]> | false
+type HooksApi<ParserOutput = string, RendererOutput = string> = Omit<_Hooks<ParserOutput, RendererOutput>, 'constructor' | 'options' | 'block'>;
+type HooksObject<ParserOutput = string, RendererOutput = string> = {
+  [K in keyof HooksApi<ParserOutput, RendererOutput>]?: (this: _Hooks<ParserOutput, RendererOutput>, ...args: Parameters<HooksApi<ParserOutput, RendererOutput>[K]>) => ReturnType<HooksApi<ParserOutput, RendererOutput>[K]> | Promise<ReturnType<HooksApi<ParserOutput, RendererOutput>[K]>>
 };
 
-type TokenizerApi = Omit<_Tokenizer, 'constructor' | 'options' | 'rules' | 'lexer'>;
-type TokenizerObject = {
-  [K in keyof TokenizerApi]?: (...args: Parameters<TokenizerApi[K]>) => ReturnType<TokenizerApi[K]> | false
+type RendererApi<ParserOutput = string, RendererOutput = string> = Omit<_Renderer<ParserOutput, RendererOutput>, 'constructor' | 'options' | 'parser'>;
+type RendererObject<ParserOutput = string, RendererOutput = string> = {
+  [K in keyof RendererApi<ParserOutput, RendererOutput>]?: (this: _Renderer<ParserOutput, RendererOutput>, ...args: Parameters<RendererApi<ParserOutput, RendererOutput>[K]>) => ReturnType<RendererApi<ParserOutput, RendererOutput>[K]> | false
 };
 
-export interface MarkedExtension {
+type TokenizerApi<ParserOutput = string, RendererOutput = string> = Omit<_Tokenizer<ParserOutput, RendererOutput>, 'constructor' | 'options' | 'rules' | 'lexer'>;
+type TokenizerObject<ParserOutput = string, RendererOutput = string> = {
+  [K in keyof TokenizerApi<ParserOutput, RendererOutput>]?: (this: _Tokenizer<ParserOutput, RendererOutput>, ...args: Parameters<TokenizerApi<ParserOutput, RendererOutput>[K]>) => ReturnType<TokenizerApi<ParserOutput, RendererOutput>[K]> | false
+};
+
+export interface MarkedExtension<ParserOutput = string, RendererOutput = string> {
   /**
    * True will tell marked to await any walkTokens functions before parsing the tokens and returning an HTML string.
    */
   async?: boolean;
 
   /**
-   * A prefix URL for any relative link.
-   * @deprecated Deprecated in v5.0.0 use marked-base-url to prefix url for any relative link.
-   */
-  baseUrl?: string | undefined | null;
-
-  /**
    * Enable GFM line breaks. This option requires the gfm option to be true.
    */
-  breaks?: boolean | undefined;
+  breaks?: boolean;
 
   /**
    * Add tokenizers and renderers to marked
    */
   extensions?:
-    | TokenizerAndRendererExtension[]
-    | undefined | null;
+    | TokenizerAndRendererExtension<ParserOutput, RendererOutput>[]
+    | null;
 
   /**
    * Enable GitHub flavored markdown.
    */
-  gfm?: boolean | undefined;
-
-  /**
-   * Include an id attribute when emitting headings.
-   * @deprecated Deprecated in v5.0.0 use marked-gfm-heading-id to include an id attribute when emitting headings (h1, h2, h3, etc).
-   */
-  headerIds?: boolean | undefined;
-
-  /**
-   * Set the prefix for header tag ids.
-   * @deprecated Deprecated in v5.0.0 use marked-gfm-heading-id to add a string to prefix the id attribute when emitting headings (h1, h2, h3, etc).
-   */
-  headerPrefix?: string | undefined;
-
-  /**
-   * A function to highlight code blocks. The function can either be
-   * synchronous (returning a string) or asynchronous (callback invoked
-   * with an error if any occurred during highlighting and a string
-   * if highlighting was successful)
-   * @deprecated Deprecated in v5.0.0 use marked-highlight to add highlighting to code blocks.
-   */
-  highlight?: ((code: string, lang: string | undefined, callback?: (error: Error, code?: string) => void) => string | void) | null;
+  gfm?: boolean;
 
   /**
    * Hooks are methods that hook into some part of marked.
    * preprocess is called to process markdown before sending it to marked.
+   * processAllTokens is called with the TokensList before walkTokens.
    * postprocess is called to process html after marked has finished parsing.
+   * emStrongMask is called to mask contents that should not be interpreted as em/strong delimiters.
+   * provideLexer is called to provide a function to tokenize markdown.
+   * provideParser is called to provide a function to parse tokens.
    */
-  hooks?: {
-    preprocess: (markdown: string) => string | Promise<string>,
-    postprocess: (html: string) => string | Promise<string>,
-    // eslint-disable-next-line no-use-before-define
-    options?: MarkedOptions
-  } | null;
-
-  /**
-   * Set the prefix for code block classes.
-   * @deprecated Deprecated in v5.0.0 use marked-highlight to prefix the className in a <code> block. Useful for syntax highlighting.
-   */
-  langPrefix?: string | undefined;
-
-  /**
-   * Mangle autolinks (<email@domain.com>).
-   * @deprecated Deprecated in v5.0.0 use marked-mangle to mangle email addresses.
-   */
-  mangle?: boolean | undefined;
+  hooks?: HooksObject<ParserOutput, RendererOutput> | null;
 
   /**
    * Conform to obscure parts of markdown.pl as much as possible. Don't fix any of the original markdown bugs or poor behavior.
    */
-  pedantic?: boolean | undefined;
+  pedantic?: boolean;
 
   /**
    * Type: object Default: new Renderer()
    *
    * An object containing functions to render tokens to HTML.
    */
-  renderer?: RendererObject | undefined | null;
-
-  /**
-   * Sanitize the output. Ignore any HTML that has been input. If true, sanitize the HTML passed into markdownString with the sanitizer function.
-   * @deprecated Warning: This feature is deprecated and it should NOT be used as it cannot be considered secure. Instead use a sanitize library, like DOMPurify (recommended), sanitize-html or insane on the output HTML!
-   */
-  sanitize?: boolean | undefined;
-
-  /**
-   * Optionally sanitize found HTML with a sanitizer function.
-   * @deprecated A function to sanitize the HTML passed into markdownString.
-   */
-  sanitizer?: ((html: string) => string) | null;
+  renderer?: RendererObject<ParserOutput, RendererOutput> | null;
 
   /**
    * Shows an HTML error message when rendering fails.
    */
-  silent?: boolean | undefined;
-
-  /**
-   * Use smarter list behavior than the original markdown. May eventually be default with the old behavior moved into pedantic.
-   */
-  smartLists?: boolean | undefined;
-
-  /**
-   * Use "smart" typograhic punctuation for things like quotes and dashes.
-   * @deprecated Deprecated in v5.0.0 use marked-smartypants to use "smart" typographic punctuation for things like quotes and dashes.
-   */
-  smartypants?: boolean | undefined;
+  silent?: boolean;
 
   /**
    * The tokenizer defines how to turn markdown text into tokens.
    */
-  tokenizer?: TokenizerObject | undefined | null;
+  tokenizer?: TokenizerObject | null;
 
   /**
    * The walkTokens function gets called with every token.
@@ -173,33 +111,33 @@ export interface MarkedExtension {
    * Each token is passed by reference so updates are persisted when passed to the parser.
    * The return value of the function is ignored.
    */
-  walkTokens?: ((token: Token) => void | Promise<void>) | undefined | null;
-  /**
-   * Generate closing slash for self-closing tags (<br/> instead of <br>)
-   * @deprecated Deprecated in v5.0.0 use marked-xhtml to emit self-closing HTML tags for void elements (<br/>, <img/>, etc.) with a "/" as required by XHTML.
-   */
-  xhtml?: boolean | undefined;
+  walkTokens?: ((token: Token) => void | Promise<void>) | null;
 }
 
-export interface MarkedOptions extends Omit<MarkedExtension, 'renderer' | 'tokenizer' | 'extensions' | 'walkTokens'> {
+export interface MarkedOptions<ParserOutput = string, RendererOutput = string> extends Omit<MarkedExtension<ParserOutput, RendererOutput>, 'hooks' | 'renderer' | 'tokenizer' | 'extensions' | 'walkTokens'> {
+  /**
+   * Hooks are methods that hook into some part of marked.
+   */
+  hooks?: _Hooks<ParserOutput, RendererOutput> | null;
+
   /**
    * Type: object Default: new Renderer()
    *
    * An object containing functions to render tokens to HTML.
    */
-  renderer?: _Renderer | undefined | null;
+  renderer?: _Renderer<ParserOutput, RendererOutput> | null;
 
   /**
    * The tokenizer defines how to turn markdown text into tokens.
    */
-  tokenizer?: _Tokenizer | undefined | null;
+  tokenizer?: _Tokenizer<ParserOutput, RendererOutput> | null;
 
   /**
    * Custom extensions
    */
   extensions?: null | {
     renderers: {
-      [name: string]: RendererExtensionFunction;
+      [name: string]: RendererExtensionFunction<ParserOutput, RendererOutput>;
     };
     childTokens: {
       [name: string]: string[];

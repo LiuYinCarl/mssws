@@ -5,38 +5,30 @@ import { _Hooks } from './Hooks.ts';
 import { _Renderer } from './Renderer.ts';
 import { _Tokenizer } from './Tokenizer.ts';
 import { _TextRenderer } from './TextRenderer.ts';
-import { _Slugger } from './Slugger.ts';
-import {
-  checkDeprecations,
-  escape
-} from './helpers.ts';
+import { escapeHtmlEntities } from './helpers.ts';
 import type { MarkedExtension, MarkedOptions } from './MarkedOptions.ts';
 import type { Token, Tokens, TokensList } from './Tokens.ts';
 
-export type ResultCallback = (error: Error | null, parseResult?: string) => undefined | void;
 export type MaybePromise = void | Promise<void>;
 
 type UnknownFunction = (...args: unknown[]) => unknown;
 type GenericRendererFunction = (...args: unknown[]) => string | false;
 
-export class Marked {
-  defaults = _getDefaults();
+export class Marked<ParserOutput = string, RendererOutput = string> {
+  defaults = _getDefaults<ParserOutput, RendererOutput>();
   options = this.setOptions;
 
-  parse = this.#parseMarkdown(_Lexer.lex, _Parser.parse);
-  parseInline = this.#parseMarkdown(_Lexer.lexInline, _Parser.parseInline);
+  parse = this.parseMarkdown(true);
+  parseInline = this.parseMarkdown(false);
 
-  Parser = _Parser;
-  parser = _Parser.parse;
-  Renderer = _Renderer;
-  TextRenderer = _TextRenderer;
+  Parser = _Parser<ParserOutput, RendererOutput>;
+  Renderer = _Renderer<ParserOutput, RendererOutput>;
+  TextRenderer = _TextRenderer<RendererOutput>;
   Lexer = _Lexer;
-  lexer = _Lexer.lex;
-  Tokenizer = _Tokenizer;
-  Slugger = _Slugger;
-  Hooks = _Hooks;
+  Tokenizer = _Tokenizer<ParserOutput, RendererOutput>;
+  Hooks = _Hooks<ParserOutput, RendererOutput>;
 
-  constructor(...args: MarkedExtension[]) {
+  constructor(...args: MarkedExtension<ParserOutput, RendererOutput>[]) {
     this.use(...args);
   }
 
@@ -69,7 +61,8 @@ export class Marked {
           const genericToken = token as Tokens.Generic;
           if (this.defaults.extensions?.childTokens?.[genericToken.type]) {
             this.defaults.extensions.childTokens[genericToken.type].forEach((childTokens) => {
-              values = values.concat(this.walkTokens(genericToken[childTokens], callback));
+              const tokens = genericToken[childTokens].flat(Infinity) as Token[] | TokensList;
+              values = values.concat(this.walkTokens(tokens, callback));
             });
           } else if (genericToken.tokens) {
             values = values.concat(this.walkTokens(genericToken.tokens, callback));
@@ -80,12 +73,12 @@ export class Marked {
     return values;
   }
 
-  use(...args: MarkedExtension[]) {
-    const extensions: MarkedOptions['extensions'] = this.defaults.extensions || { renderers: {}, childTokens: {} };
+  use(...args: MarkedExtension<ParserOutput, RendererOutput>[]) {
+    const extensions: MarkedOptions<ParserOutput, RendererOutput>['extensions'] = this.defaults.extensions || { renderers: {}, childTokens: {} };
 
     args.forEach((pack) => {
       // copy options to new object
-      const opts = { ...pack } as MarkedOptions;
+      const opts = { ...pack } as MarkedOptions<ParserOutput, RendererOutput>;
 
       // set async to true if it was set to true before
       opts.async = this.defaults.async || opts.async || false;
@@ -146,30 +139,45 @@ export class Marked {
 
       // ==-- Parse "overwrite" extensions --== //
       if (pack.renderer) {
-        const renderer = this.defaults.renderer || new _Renderer(this.defaults);
+        const renderer = this.defaults.renderer || new _Renderer<ParserOutput, RendererOutput>(this.defaults);
         for (const prop in pack.renderer) {
-          const rendererFunc = pack.renderer[prop as keyof MarkedExtension['renderer']] as GenericRendererFunction;
-          const rendererKey = prop as keyof _Renderer;
-          const prevRenderer = renderer[rendererKey] as GenericRendererFunction;
+          if (!(prop in renderer)) {
+            throw new Error(`renderer '${prop}' does not exist`);
+          }
+          if (['options', 'parser'].includes(prop)) {
+            // ignore options property
+            continue;
+          }
+          const rendererProp = prop as Exclude<keyof _Renderer<ParserOutput, RendererOutput>, 'options' | 'parser'>;
+          const rendererFunc = pack.renderer[rendererProp] as GenericRendererFunction;
+          const prevRenderer = renderer[rendererProp] as GenericRendererFunction;
           // Replace renderer with func to run extension, but fall back if false
-          renderer[rendererKey] = (...args: unknown[]) => {
+          renderer[rendererProp] = (...args: unknown[]) => {
             let ret = rendererFunc.apply(renderer, args);
             if (ret === false) {
               ret = prevRenderer.apply(renderer, args);
             }
-            return ret || '';
+            return (ret || '') as RendererOutput;
           };
         }
         opts.renderer = renderer;
       }
       if (pack.tokenizer) {
-        const tokenizer = this.defaults.tokenizer || new _Tokenizer(this.defaults);
+        const tokenizer = this.defaults.tokenizer || new _Tokenizer<ParserOutput, RendererOutput>(this.defaults);
         for (const prop in pack.tokenizer) {
-          const tokenizerFunc = pack.tokenizer[prop as keyof MarkedExtension['tokenizer']] as UnknownFunction;
-          const tokenizerKey = prop as keyof _Tokenizer;
-          const prevTokenizer = tokenizer[tokenizerKey] as UnknownFunction;
+          if (!(prop in tokenizer)) {
+            throw new Error(`tokenizer '${prop}' does not exist`);
+          }
+          if (['options', 'rules', 'lexer'].includes(prop)) {
+            // ignore options, rules, and lexer properties
+            continue;
+          }
+          const tokenizerProp = prop as Exclude<keyof _Tokenizer<ParserOutput, RendererOutput>, 'options' | 'rules' | 'lexer'>;
+          const tokenizerFunc = pack.tokenizer[tokenizerProp] as UnknownFunction;
+          const prevTokenizer = tokenizer[tokenizerProp] as UnknownFunction;
           // Replace tokenizer with func to run extension, but fall back if false
-          tokenizer[tokenizerKey] = (...args: unknown[]) => {
+          // @ts-expect-error cannot type tokenizer function dynamically
+          tokenizer[tokenizerProp] = (...args: unknown[]) => {
             let ret = tokenizerFunc.apply(tokenizer, args);
             if (ret === false) {
               ret = prevTokenizer.apply(tokenizer, args);
@@ -182,29 +190,49 @@ export class Marked {
 
       // ==-- Parse Hooks extensions --== //
       if (pack.hooks) {
-        const hooks = this.defaults.hooks || new _Hooks();
+        const hooks = this.defaults.hooks || new _Hooks<ParserOutput, RendererOutput>();
         for (const prop in pack.hooks) {
-          const hooksFunc = pack.hooks[prop as keyof MarkedExtension['hooks']] as UnknownFunction;
-          const hooksKey = prop as keyof _Hooks;
-          const prevHook = hooks[hooksKey] as UnknownFunction;
+          if (!(prop in hooks)) {
+            throw new Error(`hook '${prop}' does not exist`);
+          }
+          if (['options', 'block'].includes(prop)) {
+            // ignore options and block properties
+            continue;
+          }
+          const hooksProp = prop as Exclude<keyof _Hooks<ParserOutput, RendererOutput>, 'options' | 'block'>;
+          const hooksFunc = pack.hooks[hooksProp] as UnknownFunction;
+          const prevHook = hooks[hooksProp] as UnknownFunction;
           if (_Hooks.passThroughHooks.has(prop)) {
-            hooks[hooksKey as 'preprocess' | 'postprocess'] = (arg: string | undefined) => {
-              if (this.defaults.async) {
-                return Promise.resolve(hooksFunc.call(hooks, arg)).then(ret => {
-                  return prevHook.call(hooks, ret) as string;
-                });
+            // @ts-expect-error cannot type hook function dynamically
+            hooks[hooksProp] = (arg: unknown) => {
+              if (this.defaults.async && _Hooks.passThroughHooksRespectAsync.has(prop)) {
+                return (async() => {
+                  const ret = await hooksFunc.call(hooks, arg);
+                  return prevHook.call(hooks, ret);
+                })();
               }
 
               const ret = hooksFunc.call(hooks, arg);
-              return prevHook.call(hooks, ret) as string;
+              return prevHook.call(hooks, ret);
             };
           } else {
-            hooks[hooksKey] = (...args: unknown[]) => {
+            // @ts-expect-error cannot type hook function dynamically
+            hooks[hooksProp] = (...args: unknown[]) => {
+              if (this.defaults.async) {
+                return (async() => {
+                  let ret = await hooksFunc.apply(hooks, args);
+                  if (ret === false) {
+                    ret = await prevHook.apply(hooks, args);
+                  }
+                  return ret;
+                })();
+              }
+
               let ret = hooksFunc.apply(hooks, args);
               if (ret === false) {
                 ret = prevHook.apply(hooks, args);
               }
-              return ret as string;
+              return ret;
             };
           }
         }
@@ -231,31 +259,37 @@ export class Marked {
     return this;
   }
 
-  setOptions(opt: MarkedOptions) {
+  setOptions(opt: MarkedOptions<ParserOutput, RendererOutput>) {
     this.defaults = { ...this.defaults, ...opt };
     return this;
   }
 
-  #parseMarkdown(lexer: (src: string, options?: MarkedOptions) => TokensList | Token[], parser: (tokens: Token[], options?: MarkedOptions) => string) {
-    return (src: string, optOrCallback?: MarkedOptions | ResultCallback | undefined | null, callback?: ResultCallback | undefined): string | Promise<string | undefined> | undefined => {
-      if (typeof optOrCallback === 'function') {
-        callback = optOrCallback;
-        optOrCallback = null;
-      }
+  lexer(src: string, options?: MarkedOptions<ParserOutput, RendererOutput>) {
+    return _Lexer.lex(src, options ?? this.defaults);
+  }
 
-      const origOpt = { ...optOrCallback };
+  parser(tokens: Token[], options?: MarkedOptions<ParserOutput, RendererOutput>) {
+    return _Parser.parse<ParserOutput, RendererOutput>(tokens, options ?? this.defaults);
+  }
+
+  private parseMarkdown(blockType: boolean) {
+    type overloadedParse = {
+      (src: string, options: MarkedOptions<ParserOutput, RendererOutput> & { async: true }): Promise<ParserOutput>;
+      (src: string, options: MarkedOptions<ParserOutput, RendererOutput> & { async: false }): ParserOutput;
+      (src: string, options?: MarkedOptions<ParserOutput, RendererOutput> | null): ParserOutput | Promise<ParserOutput>;
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parse: overloadedParse = (src: string, options?: MarkedOptions<ParserOutput, RendererOutput> | null): any => {
+      const origOpt = { ...options };
       const opt = { ...this.defaults, ...origOpt };
 
-      // Show warning if an extension set async to true but the parse was called with async: false
+      const throwError = this.onError(!!opt.silent, !!opt.async);
+
+      // throw error if an extension set async to true but parse was called with async: false
       if (this.defaults.async === true && origOpt.async === false) {
-        if (!opt.silent) {
-          console.warn('marked(): The async option was set to true by an extension. The async: false option sent to parse will be ignored.');
-        }
-
-        opt.async = true;
+        return throwError(new Error('marked(): The async option was set to true by an extension. Remove async: false from the parse options object to return a Promise.'));
       }
-
-      const throwError = this.#onError(!!opt.silent, !!opt.async, callback);
 
       // throw error in case of non string input
       if (typeof src === 'undefined' || src === null) {
@@ -266,140 +300,68 @@ export class Marked {
           + Object.prototype.toString.call(src) + ', string expected'));
       }
 
-      checkDeprecations(opt, callback);
-
       if (opt.hooks) {
         opt.hooks.options = opt;
-      }
-
-      if (callback) {
-        const resultCallback = callback;
-        const highlight = opt.highlight;
-        let tokens: TokensList | Token[];
-
-        try {
-          if (opt.hooks) {
-            src = opt.hooks.preprocess(src) as string;
-          }
-          tokens = lexer(src, opt);
-        } catch (e) {
-          return throwError(e as Error);
-        }
-
-        const done = (err?: Error) => {
-          let out;
-
-          if (!err) {
-            try {
-              if (opt.walkTokens) {
-                this.walkTokens(tokens, opt.walkTokens);
-              }
-              out = parser(tokens, opt);
-              if (opt.hooks) {
-                out = opt.hooks.postprocess(out) as string;
-              }
-            } catch (e) {
-              err = e as Error;
-            }
-          }
-
-          opt.highlight = highlight;
-
-          return err
-            ? throwError(err)
-            : resultCallback(null, out) as undefined;
-        };
-
-        if (!highlight || highlight.length < 3) {
-          return done();
-        }
-
-        delete opt.highlight;
-
-        if (!tokens.length) return done();
-
-        let pending = 0;
-        this.walkTokens(tokens, (token) => {
-          if (token.type === 'code') {
-            pending++;
-            setTimeout(() => {
-              highlight(token.text, token.lang, (err, code) => {
-                if (err) {
-                  return done(err);
-                }
-                if (code != null && code !== token.text) {
-                  token.text = code;
-                  token.escaped = true;
-                }
-
-                pending--;
-                if (pending === 0) {
-                  done();
-                }
-              });
-            }, 0);
-          }
-        });
-
-        if (pending === 0) {
-          done();
-        }
-
-        return;
+        opt.hooks.block = blockType;
       }
 
       if (opt.async) {
-        return Promise.resolve(opt.hooks ? opt.hooks.preprocess(src) : src)
-          .then(src => lexer(src, opt))
-          .then(tokens => opt.walkTokens ? Promise.all(this.walkTokens(tokens, opt.walkTokens)).then(() => tokens) : tokens)
-          .then(tokens => parser(tokens, opt))
-          .then(html => opt.hooks ? opt.hooks.postprocess(html) : html)
-          .catch(throwError);
+        return (async() => {
+          const processedSrc = opt.hooks ? await opt.hooks.preprocess(src) : src;
+          const lexer = opt.hooks ? await opt.hooks.provideLexer() : (blockType ? _Lexer.lex : _Lexer.lexInline);
+          const tokens = await lexer(processedSrc, opt);
+          const processedTokens = opt.hooks ? await opt.hooks.processAllTokens(tokens) : tokens;
+          if (opt.walkTokens) {
+            await Promise.all(this.walkTokens(processedTokens, opt.walkTokens));
+          }
+          const parser = opt.hooks ? await opt.hooks.provideParser() : (blockType ? _Parser.parse : _Parser.parseInline);
+          const html = await parser(processedTokens, opt);
+          return opt.hooks ? await opt.hooks.postprocess(html) : html;
+        })().catch(throwError);
       }
 
       try {
         if (opt.hooks) {
           src = opt.hooks.preprocess(src) as string;
         }
-        const tokens = lexer(src, opt);
+        const lexer = opt.hooks ? opt.hooks.provideLexer() : (blockType ? _Lexer.lex : _Lexer.lexInline);
+        let tokens = lexer(src, opt);
+        if (opt.hooks) {
+          tokens = opt.hooks.processAllTokens(tokens);
+        }
         if (opt.walkTokens) {
           this.walkTokens(tokens, opt.walkTokens);
         }
+        const parser = opt.hooks ? opt.hooks.provideParser() : (blockType ? _Parser.parse : _Parser.parseInline);
         let html = parser(tokens, opt);
         if (opt.hooks) {
-          html = opt.hooks.postprocess(html) as string;
+          html = opt.hooks.postprocess(html);
         }
         return html;
-      } catch (e) {
+      } catch(e) {
         return throwError(e as Error);
       }
     };
+
+    return parse;
   }
 
-  #onError(silent: boolean, async: boolean, callback?: ResultCallback) {
-    return (e: Error): string | Promise<string> | undefined => {
+  private onError(silent: boolean, async: boolean) {
+    return (e: Error): string | Promise<string> => {
       e.message += '\nPlease report this to https://github.com/markedjs/marked.';
 
       if (silent) {
         const msg = '<p>An error occurred:</p><pre>'
-          + escape(e.message + '', true)
+          + escapeHtmlEntities(e.message + '', true)
           + '</pre>';
         if (async) {
           return Promise.resolve(msg);
-        }
-        if (callback) {
-          callback(null, msg);
-          return;
         }
         return msg;
       }
 
       if (async) {
         return Promise.reject(e);
-      }
-      if (callback) {
-        callback(e);
-        return;
       }
       throw e;
     };

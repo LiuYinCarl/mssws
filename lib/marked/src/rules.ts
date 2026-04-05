@@ -1,200 +1,239 @@
-import {
-  noopTest,
-  edit
-} from './helpers.ts';
+const noopTest = { exec: () => null } as unknown as RegExp;
 
-export type Rule = RegExp | string;
-
-export interface Rules {
-  [ruleName: string]: Pick<RegExp, 'exec'> | Rule | Rules;
+function edit(regex: string | RegExp, opt = '') {
+  let source = typeof regex === 'string' ? regex : regex.source;
+  const obj = {
+    replace: (name: string | RegExp, val: string | RegExp) => {
+      let valSource = typeof val === 'string' ? val : val.source;
+      valSource = valSource.replace(other.caret, '$1');
+      source = source.replace(name, valSource);
+      return obj;
+    },
+    getRegex: () => {
+      return new RegExp(source, opt);
+    },
+  };
+  return obj;
 }
 
-type BlockRuleNames =
-    | 'newline'
-    | 'code'
-    | 'fences'
-    | 'hr'
-    | 'heading'
-    | 'blockquote'
-    | 'list'
-    | 'html'
-    | 'def'
-    | 'lheading'
-    | '_paragraph'
-    | 'text'
-    | '_label'
-    | '_title'
-    | 'bullet'
-    | 'listItemStart'
-    | '_tag'
-    | '_comment'
-    | 'paragraph'
-    | 'uote' ;
+const supportsLookbehind = (() => {
+try {
+  // eslint-disable-next-line prefer-regex-literals
+  return !!new RegExp('(?<=1)(?<!1)');
+} catch {
+  // See browser support here:
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Regular_expressions/Lookbehind_assertion
+  return false;
+}
+})();
 
-type BlockSubRuleNames = 'normal' | 'gfm' | 'pedantic';
-
-type InlineRuleNames =
-    | 'escape'
-    | 'autolink'
-    | 'tag'
-    | 'link'
-    | 'reflink'
-    | 'nolink'
-    | 'reflinkSearch'
-    | 'code'
-    | 'br'
-    | 'text'
-    | '_punctuation'
-    | 'punctuation'
-    | 'blockSkip'
-    | 'escapedEmSt'
-    | '_comment'
-    | '_escapes'
-    | '_scheme'
-    | '_email'
-    | '_attribute'
-    | '_label'
-    | '_href'
-    | '_title'
-    | 'strong'
-    | '_extended_email'
-    | '_backpedal';
-
-type InlineSubRuleNames = 'gfm' | 'emStrong' | 'normal' | 'pedantic'| 'breaks';
+export const other = {
+  codeRemoveIndent: /^(?: {1,4}| {0,3}\t)/gm,
+  outputLinkReplace: /\\([\[\]])/g,
+  indentCodeCompensation: /^(\s+)(?:```)/,
+  beginningSpace: /^\s+/,
+  endingHash: /#$/,
+  startingSpaceChar: /^ /,
+  endingSpaceChar: / $/,
+  nonSpaceChar: /[^ ]/,
+  newLineCharGlobal: /\n/g,
+  tabCharGlobal: /\t/g,
+  multipleSpaceGlobal: /\s+/g,
+  blankLine: /^[ \t]*$/,
+  doubleBlankLine: /\n[ \t]*\n[ \t]*$/,
+  blockquoteStart: /^ {0,3}>/,
+  blockquoteSetextReplace: /\n {0,3}((?:=+|-+) *)(?=\n|$)/g,
+  blockquoteSetextReplace2: /^ {0,3}>[ \t]?/gm,
+  listReplaceNesting: /^ {1,4}(?=( {4})*[^ ])/g,
+  listIsTask: /^\[[ xX]\] +\S/,
+  listReplaceTask: /^\[[ xX]\] +/,
+  listTaskCheckbox: /\[[ xX]\]/,
+  anyLine: /\n.*\n/,
+  hrefBrackets: /^<(.*)>$/,
+  tableDelimiter: /[:|]/,
+  tableAlignChars: /^\||\| *$/g,
+  tableRowBlankLine: /\n[ \t]*$/,
+  tableAlignRight: /^ *-+: *$/,
+  tableAlignCenter: /^ *:-+: *$/,
+  tableAlignLeft: /^ *:-+ *$/,
+  startATag: /^<a /i,
+  endATag: /^<\/a>/i,
+  startPreScriptTag: /^<(pre|code|kbd|script)(\s|>)/i,
+  endPreScriptTag: /^<\/(pre|code|kbd|script)(\s|>)/i,
+  startAngleBracket: /^</,
+  endAngleBracket: />$/,
+  pedanticHrefTitle: /^([^'"]*[^\s])\s+(['"])(.*)\2/,
+  unicodeAlphaNumeric: /[\p{L}\p{N}]/u,
+  escapeTest: /[&<>"']/,
+  escapeReplace: /[&<>"']/g,
+  escapeTestNoEncode: /[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/,
+  escapeReplaceNoEncode: /[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/g,
+  caret: /(^|[^\[])\^/g,
+  percentDecode: /%25/g,
+  findPipe: /\|/g,
+  splitPipe: / \|/,
+  slashPipe: /\\\|/g,
+  carriageReturn: /\r\n|\r/g,
+  spaceLine: /^ +$/gm,
+  notSpaceStart: /^\S*/,
+  endingNewline: /\n$/,
+  listItemRegex: (bull: string) => new RegExp(`^( {0,3}${bull})((?:[\t ][^\\n]*)?(?:\\n|$))`),
+  nextBulletRegex: (indent: number) => new RegExp(`^ {0,${Math.min(3, indent - 1)}}(?:[*+-]|\\d{1,9}[.)])((?:[ \t][^\\n]*)?(?:\\n|$))`),
+  hrRegex: (indent: number) => new RegExp(`^ {0,${Math.min(3, indent - 1)}}((?:- *){3,}|(?:_ *){3,}|(?:\\* *){3,})(?:\\n+|$)`),
+  fencesBeginRegex: (indent: number) => new RegExp(`^ {0,${Math.min(3, indent - 1)}}(?:\`\`\`|~~~)`),
+  headingBeginRegex: (indent: number) => new RegExp(`^ {0,${Math.min(3, indent - 1)}}#`),
+  htmlBeginRegex: (indent: number) => new RegExp(`^ {0,${Math.min(3, indent - 1)}}<(?:[a-z].*>|!--)`, 'i'),
+  blockquoteBeginRegex: (indent: number) => new RegExp(`^ {0,${Math.min(3, indent - 1)}}>`),
+};
 
 /**
  * Block-Level Grammar
  */
-// Not all rules are defined in the object literal
-// @ts-expect-error
-export const block: Record<BlockRuleNames, Rule> & Record<BlockSubRuleNames, Rules> & Rules = {
-  newline: /^(?: *(?:\n|$))+/,
-  code: /^( {4}[^\n]+(?:\n(?: *(?:\n|$))*)?)+/,
-  fences: /^ {0,3}(`{3,}(?=[^`\n]*(?:\n|$))|~{3,})([^\n]*)(?:\n|$)(?:|([\s\S]*?)(?:\n|$))(?: {0,3}\1[~`]* *(?=\n|$)|$)/,
-  hr: /^ {0,3}((?:-[\t ]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})(?:\n+|$)/,
-  heading: /^ {0,3}(#{1,6})(?=\s|$)(.*)(?:\n+|$)/,
-  blockquote: /^( {0,3}> ?(paragraph|[^\n]*)(?:\n|$))+/,
-  list: /^( {0,3}bull)([ \t][^\n]+?)?(?:\n|$)/,
-  html: '^ {0,3}(?:' // optional indentation
-    + '<(script|pre|style|textarea)[\\s>][\\s\\S]*?(?:</\\1>[^\\n]*\\n+|$)' // (1)
-    + '|comment[^\\n]*(\\n+|$)' // (2)
-    + '|<\\?[\\s\\S]*?(?:\\?>\\n*|$)' // (3)
-    + '|<![A-Z][\\s\\S]*?(?:>\\n*|$)' // (4)
-    + '|<!\\[CDATA\\[[\\s\\S]*?(?:\\]\\]>\\n*|$)' // (5)
-    + '|</?(tag)(?: +|\\n|/?>)[\\s\\S]*?(?:(?:\\n *)+\\n|$)' // (6)
-    + '|<(?!script|pre|style|textarea)([a-z][\\w-]*)(?:attribute)*? */?>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n *)+\\n|$)' // (7) open tag
-    + '|</(?!script|pre|style|textarea)[a-z][\\w-]*\\s*>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n *)+\\n|$)' // (7) closing tag
-    + ')',
-  def: /^ {0,3}\[(label)\]: *(?:\n *)?([^<\s][^\s]*|<.*?>)(?:(?: +(?:\n *)?| *\n *)(title))? *(?:\n+|$)/,
-  table: noopTest,
-  lheading: /^((?:(?!^bull ).|\n(?!\n|bull ))+?)\n {0,3}(=+|-+) *(?:\n+|$)/,
-  // regex template, placeholders will be replaced according to different paragraph
-  // interruption rules of commonmark and the original markdown spec:
-  _paragraph: /^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list|html|table| +\n)[^\n]+)*)/,
-  text: /^[^\n]+/
-};
 
-block._label = /(?!\s*\])(?:\\.|[^\[\]\\])+/;
-block._title = /(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))/;
-block.def = edit(block.def)
-  .replace('label', block._label)
-  .replace('title', block._title)
+const newline = /^(?:[ \t]*(?:\n|$))+/;
+const blockCode = /^((?: {4}| {0,3}\t)[^\n]+(?:\n(?:[ \t]*(?:\n|$))*)?)+/;
+const fences = /^ {0,3}(`{3,}(?=[^`\n]*(?:\n|$))|~{3,})([^\n]*)(?:\n|$)(?:|([\s\S]*?)(?:\n|$))(?: {0,3}\1[~`]* *(?=\n|$)|$)/;
+const hr = /^ {0,3}((?:-[\t ]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})(?:\n+|$)/;
+const heading = /^ {0,3}(#{1,6})(?=\s|$)(.*)(?:\n+|$)/;
+const bullet = / {0,3}(?:[*+-]|\d{1,9}[.)])/;
+const lheadingCore = /^(?!bull |blockCode|fences|blockquote|heading|html|table)((?:.|\n(?!\s*?\n|bull |blockCode|fences|blockquote|heading|html|table))+?)\n {0,3}(=+|-+) *(?:\n+|$)/;
+const lheading = edit(lheadingCore)
+  .replace(/bull/g, bullet) // lists can interrupt
+  .replace(/blockCode/g, /(?: {4}| {0,3}\t)/) // indented code blocks can interrupt
+  .replace(/fences/g, / {0,3}(?:`{3,}|~{3,})/) // fenced code blocks can interrupt
+  .replace(/blockquote/g, / {0,3}>/) // blockquote can interrupt
+  .replace(/heading/g, / {0,3}#{1,6}/) // ATX heading can interrupt
+  .replace(/html/g, / {0,3}<[^\n>]+>\n/) // block html can interrupt
+  .replace(/\|table/g, '') // table not in commonmark
+  .getRegex();
+const lheadingGfm = edit(lheadingCore)
+  .replace(/bull/g, bullet) // lists can interrupt
+  .replace(/blockCode/g, /(?: {4}| {0,3}\t)/) // indented code blocks can interrupt
+  .replace(/fences/g, / {0,3}(?:`{3,}|~{3,})/) // fenced code blocks can interrupt
+  .replace(/blockquote/g, / {0,3}>/) // blockquote can interrupt
+  .replace(/heading/g, / {0,3}#{1,6}/) // ATX heading can interrupt
+  .replace(/html/g, / {0,3}<[^\n>]+>\n/) // block html can interrupt
+  .replace(/table/g, / {0,3}\|?(?:[:\- ]*\|)+[\:\- ]*\n/) // table can interrupt
+  .getRegex();
+const _paragraph = /^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list|html|table| +\n)[^\n]+)*)/;
+const blockText = /^[^\n]+/;
+const _blockLabel = /(?!\s*\])(?:\\[\s\S]|[^\[\]\\])+/;
+const def = edit(/^ {0,3}\[(label)\]: *(?:\n[ \t]*)?([^<\s][^\s]*|<.*?>)(?:(?: +(?:\n[ \t]*)?| *\n[ \t]*)(title))? *(?:\n+|$)/)
+  .replace('label', _blockLabel)
+  .replace('title', /(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))/)
   .getRegex();
 
-block.bullet = /(?:[*+-]|\d{1,9}[.)])/;
-block.listItemStart = edit(/^( *)(bull) */)
-  .replace('bull', block.bullet)
+const list = edit(/^(bull)([ \t][^\n]+?)?(?:\n|$)/)
+  .replace(/bull/g, bullet)
   .getRegex();
 
-block.list = edit(block.list)
-  .replace(/bull/g, block.bullet)
-  .replace('hr', '\\n+(?=\\1?(?:(?:- *){3,}|(?:_ *){3,}|(?:\\* *){3,})(?:\\n+|$))')
-  .replace('def', '\\n+(?=' + block.def.source + ')')
-  .getRegex();
-
-block._tag = 'address|article|aside|base|basefont|blockquote|body|caption'
+const _tag = 'address|article|aside|base|basefont|blockquote|body|caption'
   + '|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption'
   + '|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe'
   + '|legend|li|link|main|menu|menuitem|meta|nav|noframes|ol|optgroup|option'
-  + '|p|param|section|source|summary|table|tbody|td|tfoot|th|thead|title|tr'
-  + '|track|ul';
-block._comment = /<!--(?!-?>)[\s\S]*?(?:-->|$)/;
-block.html = edit(block.html, 'i')
-  .replace('comment', block._comment)
-  .replace('tag', block._tag)
+  + '|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title'
+  + '|tr|track|ul';
+const _comment = /<!--(?:-?>|[\s\S]*?(?:-->|$))/;
+const html = edit(
+  '^ {0,3}(?:' // optional indentation
++ '<(script|pre|style|textarea)[\\s>][\\s\\S]*?(?:</\\1>[^\\n]*\\n+|$)' // (1)
++ '|comment[^\\n]*(\\n+|$)' // (2)
++ '|<\\?[\\s\\S]*?(?:\\?>\\n*|$)' // (3)
++ '|<![A-Z][\\s\\S]*?(?:>\\n*|$)' // (4)
++ '|<!\\[CDATA\\[[\\s\\S]*?(?:\\]\\]>\\n*|$)' // (5)
++ '|</?(tag)(?: +|\\n|/?>)[\\s\\S]*?(?:(?:\\n[ \t]*)+\\n|$)' // (6)
++ '|<(?!script|pre|style|textarea)([a-z][\\w-]*)(?:attribute)*? */?>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ \t]*)+\\n|$)' // (7) open tag
++ '|</(?!script|pre|style|textarea)[a-z][\\w-]*\\s*>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ \t]*)+\\n|$)' // (7) closing tag
++ ')', 'i')
+  .replace('comment', _comment)
+  .replace('tag', _tag)
   .replace('attribute', / +[a-zA-Z:_][\w.:-]*(?: *= *"[^"\n]*"| *= *'[^'\n]*'| *= *[^\s"'=<>`]+)?/)
   .getRegex();
 
-block.lheading = edit(block.lheading)
-  .replace(/bull/g, block.bullet) // lists can interrupt
-  .getRegex();
-
-block.paragraph = edit(block._paragraph)
-  .replace('hr', block.hr)
-  .replace('heading', ' {0,3}#{1,6} ')
-  .replace('|lheading', '') // setex headings don't interrupt commonmark paragraphs
+const paragraph = edit(_paragraph)
+  .replace('hr', hr)
+  .replace('heading', ' {0,3}#{1,6}(?:\\s|$)')
+  .replace('|lheading', '') // setext headings don't interrupt commonmark paragraphs
   .replace('|table', '')
   .replace('blockquote', ' {0,3}>')
   .replace('fences', ' {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n')
-  .replace('list', ' {0,3}(?:[*+-]|1[.)]) ') // only lists starting from 1 can interrupt
+  .replace('list', ' {0,3}(?:[*+-]|1[.)])[ \\t]') // only lists starting from 1 can interrupt
   .replace('html', '</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)')
-  .replace('tag', block._tag) // pars can be interrupted by type (6) html blocks
+  .replace('tag', _tag) // pars can be interrupted by type (6) html blocks
   .getRegex();
 
-block.blockquote = edit(block.blockquote)
-  .replace('paragraph', block.paragraph)
+const blockquote = edit(/^( {0,3}> ?(paragraph|[^\n]*)(?:\n|$))+/)
+  .replace('paragraph', paragraph)
   .getRegex();
 
 /**
  * Normal Block Grammar
  */
 
-block.normal = { ...block };
+const blockNormal = {
+  blockquote,
+  code: blockCode,
+  def,
+  fences,
+  heading,
+  hr,
+  html,
+  lheading,
+  list,
+  newline,
+  paragraph,
+  table: noopTest,
+  text: blockText,
+};
+
+type BlockKeys = keyof typeof blockNormal;
 
 /**
  * GFM Block Grammar
  */
 
-block.gfm = {
-  ...block.normal,
-  table: '^ *([^\\n ].*\\|.*)\\n' // Header
-    + ' {0,3}(?:\\| *)?(:?-+:? *(?:\\| *:?-+:? *)*)(?:\\| *)?' // Align
-    + '(?:\\n((?:(?! *\\n|hr|heading|blockquote|code|fences|list|html).*(?:\\n|$))*)\\n*|$)' // Cells
+const gfmTable = edit(
+  '^ *([^\\n ].*)\\n' // Header
++ ' {0,3}((?:\\| *)?:?-+:? *(?:\\| *:?-+:? *)*(?:\\| *)?)' // Align
++ '(?:\\n((?:(?! *\\n|hr|heading|blockquote|code|fences|list|html).*(?:\\n|$))*)\\n*|$)') // Cells
+  .replace('hr', hr)
+  .replace('heading', ' {0,3}#{1,6}(?:\\s|$)')
+  .replace('blockquote', ' {0,3}>')
+  .replace('code', '(?: {4}| {0,3}\t)[^\\n]')
+  .replace('fences', ' {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n')
+  .replace('list', ' {0,3}(?:[*+-]|1[.)])[ \\t]') // only lists starting from 1 can interrupt
+  .replace('html', '</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)')
+  .replace('tag', _tag) // tables can be interrupted by type (6) html blocks
+  .getRegex();
+
+const blockGfm: Record<BlockKeys, RegExp> = {
+  ...blockNormal,
+  lheading: lheadingGfm,
+  table: gfmTable,
+  paragraph: edit(_paragraph)
+    .replace('hr', hr)
+    .replace('heading', ' {0,3}#{1,6}(?:\\s|$)')
+    .replace('|lheading', '') // setext headings don't interrupt commonmark paragraphs
+    .replace('table', gfmTable) // interrupt paragraphs with table
+    .replace('blockquote', ' {0,3}>')
+    .replace('fences', ' {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n')
+    .replace('list', ' {0,3}(?:[*+-]|1[.)])[ \\t]') // only lists starting from 1 can interrupt
+    .replace('html', '</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)')
+    .replace('tag', _tag) // pars can be interrupted by type (6) html blocks
+    .getRegex(),
 };
 
-block.gfm.table = edit(block.gfm.table as Rule)
-  .replace('hr', block.hr)
-  .replace('heading', ' {0,3}#{1,6} ')
-  .replace('blockquote', ' {0,3}>')
-  .replace('code', ' {4}[^\\n]')
-  .replace('fences', ' {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n')
-  .replace('list', ' {0,3}(?:[*+-]|1[.)]) ') // only lists starting from 1 can interrupt
-  .replace('html', '</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)')
-  .replace('tag', block._tag) // tables can be interrupted by type (6) html blocks
-  .getRegex();
-
-block.gfm.paragraph = edit(block._paragraph)
-  .replace('hr', block.hr)
-  .replace('heading', ' {0,3}#{1,6} ')
-  .replace('|lheading', '') // setex headings don't interrupt commonmark paragraphs
-  .replace('table', block.gfm.table as RegExp) // interrupt paragraphs with table
-  .replace('blockquote', ' {0,3}>')
-  .replace('fences', ' {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n')
-  .replace('list', ' {0,3}(?:[*+-]|1[.)]) ') // only lists starting from 1 can interrupt
-  .replace('html', '</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)')
-  .replace('tag', block._tag) // pars can be interrupted by type (6) html blocks
-  .getRegex();
 /**
  * Pedantic grammar (original John Gruber's loose markdown specification)
  */
 
-block.pedantic = {
-  ...block.normal,
+const blockPedantic: Record<BlockKeys, RegExp> = {
+  ...blockNormal,
   html: edit(
     '^ *(?:comment *(?:\\n|\\s*$)'
     + '|<(tag)[\\s\\S]+?</\\1> *(?:\\n{2,}|\\s*$)' // closed tag
     + '|<tag(?:"[^"]*"|\'[^\']*\'|\\s[^\'"/>\\s]*)*?/?> *(?:\\n{2,}|\\s*$))')
-    .replace('comment', block._comment)
+    .replace('comment', _comment)
     .replace(/tag/g, '(?!(?:'
       + 'a|em|strong|small|s|cite|q|dfn|abbr|data|time|code|var|samp|kbd|sub'
       + '|sup|i|b|u|mark|ruby|rt|rp|bdi|bdo|span|br|wbr|ins|del|img)'
@@ -204,177 +243,257 @@ block.pedantic = {
   heading: /^(#{1,6})(.*)(?:\n+|$)/,
   fences: noopTest, // fences not supported
   lheading: /^(.+?)\n {0,3}(=+|-+) *(?:\n+|$)/,
-  paragraph: edit(block.normal._paragraph as Rule)
-    .replace('hr', block.hr)
+  paragraph: edit(_paragraph)
+    .replace('hr', hr)
     .replace('heading', ' *#{1,6} *[^\n]')
-    .replace('lheading', block.lheading)
+    .replace('lheading', lheading)
+    .replace('|table', '')
     .replace('blockquote', ' {0,3}>')
     .replace('|fences', '')
     .replace('|list', '')
     .replace('|html', '')
-    .getRegex()
+    .replace('|tag', '')
+    .getRegex(),
 };
 
 /**
  * Inline-Level Grammar
  */
-// Not all rules are defined in the object literal
-// @ts-expect-error
-export const inline: Record<InlineRuleNames, Rule> & Record<InlineSubRuleNames, Rules> & Rules = {
-  escape: /^\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])/,
-  autolink: /^<(scheme:[^\s\x00-\x1f<>]*|email)>/,
-  url: noopTest,
-  tag: '^comment'
+
+const escape = /^\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])/;
+const inlineCode = /^(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)/;
+const br = /^( {2,}|\\)\n(?!\s*$)/;
+const inlineText = /^(`+|[^`])(?:(?= {2,}\n)|[\s\S]*?(?:(?=[\\<!\[`*_]|\b_|$)|[^ ](?= {2,}\n)))/;
+
+// list of unicode punctuation marks, plus any missing characters from CommonMark spec
+const _punctuation = /[\p{P}\p{S}]/u;
+const _punctuationOrSpace = /[\s\p{P}\p{S}]/u;
+const _notPunctuationOrSpace = /[^\s\p{P}\p{S}]/u;
+const punctuation = edit(/^((?![*_])punctSpace)/, 'u')
+  .replace(/punctSpace/g, _punctuationOrSpace).getRegex();
+
+// GFM allows ~ inside strong and em for strikethrough
+const _punctuationGfmStrongEm = /(?!~)[\p{P}\p{S}]/u;
+const _punctuationOrSpaceGfmStrongEm = /(?!~)[\s\p{P}\p{S}]/u;
+const _notPunctuationOrSpaceGfmStrongEm = /(?:[^\s\p{P}\p{S}]|~)/u;
+
+// sequences em should skip over [title](link), `code`, <html>
+const blockSkip = edit(/link|precode-code|html/, 'g')
+  .replace('link', /\[(?:[^\[\]`]|(?<a>`+)[^`]+\k<a>(?!`))*?\]\((?:\\[\s\S]|[^\\\(\)]|\((?:\\[\s\S]|[^\\\(\)])*\))*\)/)
+  .replace('precode-', supportsLookbehind ? '(?<!`)()' : '(^^|[^`])')
+  .replace('code', /(?<b>`+)[^`]+\k<b>(?!`)/)
+  .replace('html', /<(?! )[^<>]*?>/)
+  .getRegex();
+
+const emStrongLDelimCore = /^(?:\*+(?:((?!\*)punct)|([^\s*]))?)|^_+(?:((?!_)punct)|([^\s_]))?/;
+
+const emStrongLDelim = edit(emStrongLDelimCore, 'u')
+  .replace(/punct/g, _punctuation)
+  .getRegex();
+
+const emStrongLDelimGfm = edit(emStrongLDelimCore, 'u')
+  .replace(/punct/g, _punctuationGfmStrongEm)
+  .getRegex();
+
+const emStrongRDelimAstCore =
+  '^[^_*]*?__[^_*]*?\\*[^_*]*?(?=__)' // Skip orphan inside strong
++ '|[^*]+(?=[^*])' // Consume to delim
++ '|(?!\\*)punct(\\*+)(?=[\\s]|$)' // (1) #*** can only be a Right Delimiter
++ '|notPunctSpace(\\*+)(?!\\*)(?=punctSpace|$)' // (2) a***#, a*** can only be a Right Delimiter
++ '|(?!\\*)punctSpace(\\*+)(?=notPunctSpace)' // (3) #***a, ***a can only be Left Delimiter
++ '|[\\s](\\*+)(?!\\*)(?=punct)' // (4) ***# can only be Left Delimiter
++ '|(?!\\*)punct(\\*+)(?!\\*)(?=punct)' // (5) #***# can be either Left or Right Delimiter
++ '|notPunctSpace(\\*+)(?=notPunctSpace)'; // (6) a***a can be either Left or Right Delimiter
+
+const emStrongRDelimAst = edit(emStrongRDelimAstCore, 'gu')
+  .replace(/notPunctSpace/g, _notPunctuationOrSpace)
+  .replace(/punctSpace/g, _punctuationOrSpace)
+  .replace(/punct/g, _punctuation)
+  .getRegex();
+
+const emStrongRDelimAstGfm = edit(emStrongRDelimAstCore, 'gu')
+  .replace(/notPunctSpace/g, _notPunctuationOrSpaceGfmStrongEm)
+  .replace(/punctSpace/g, _punctuationOrSpaceGfmStrongEm)
+  .replace(/punct/g, _punctuationGfmStrongEm)
+  .getRegex();
+
+// (6) Not allowed for _
+const emStrongRDelimUnd = edit(
+  '^[^_*]*?\\*\\*[^_*]*?_[^_*]*?(?=\\*\\*)' // Skip orphan inside strong
++ '|[^_]+(?=[^_])' // Consume to delim
++ '|(?!_)punct(_+)(?=[\\s]|$)' // (1) #___ can only be a Right Delimiter
++ '|notPunctSpace(_+)(?!_)(?=punctSpace|$)' // (2) a___#, a___ can only be a Right Delimiter
++ '|(?!_)punctSpace(_+)(?=notPunctSpace)' // (3) #___a, ___a can only be Left Delimiter
++ '|[\\s](_+)(?!_)(?=punct)' // (4) ___# can only be Left Delimiter
++ '|(?!_)punct(_+)(?!_)(?=punct)', 'gu') // (5) #___# can be either Left or Right Delimiter
+  .replace(/notPunctSpace/g, _notPunctuationOrSpace)
+  .replace(/punctSpace/g, _punctuationOrSpace)
+  .replace(/punct/g, _punctuation)
+  .getRegex();
+
+// Tilde left delimiter for strikethrough (similar to emStrongLDelim for asterisk)
+const delLDelim = edit(/^~~?(?:((?!~)punct)|[^\s~])/, 'u')
+  .replace(/punct/g, _punctuation)
+  .getRegex();
+
+// Tilde delimiter patterns for strikethrough (similar to asterisk)
+const delRDelimCore =
+  '^[^~]+(?=[^~])' // Consume to delim
++ '|(?!~)punct(~~?)(?=[\\s]|$)' // (1) #~~ can only be a Right Delimiter
++ '|notPunctSpace(~~?)(?!~)(?=punctSpace|$)' // (2) a~~#, a~~ can only be a Right Delimiter
++ '|(?!~)punctSpace(~~?)(?=notPunctSpace)' // (3) #~~a, ~~a can only be Left Delimiter
++ '|[\\s](~~?)(?!~)(?=punct)' // (4) ~~# can only be Left Delimiter
++ '|(?!~)punct(~~?)(?!~)(?=punct)' // (5) #~~# can be either Left or Right Delimiter
++ '|notPunctSpace(~~?)(?=notPunctSpace)'; // (6) a~~a can be either Left or Right Delimiter
+
+const delRDelim = edit(delRDelimCore, 'gu')
+  .replace(/notPunctSpace/g, _notPunctuationOrSpace)
+  .replace(/punctSpace/g, _punctuationOrSpace)
+  .replace(/punct/g, _punctuation)
+  .getRegex();
+
+const anyPunctuation = edit(/\\(punct)/, 'gu')
+  .replace(/punct/g, _punctuation)
+  .getRegex();
+
+const autolink = edit(/^<(scheme:[^\s\x00-\x1f<>]*|email)>/)
+  .replace('scheme', /[a-zA-Z][a-zA-Z0-9+.-]{1,31}/)
+  .replace('email', /[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+(@)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?![-_])/)
+  .getRegex();
+
+const _inlineComment = edit(_comment).replace('(?:-->|$)', '-->').getRegex();
+const tag = edit(
+  '^comment'
     + '|^</[a-zA-Z][\\w:-]*\\s*>' // self-closing tag
     + '|^<[a-zA-Z][\\w-]*(?:attribute)*?\\s*/?>' // open tag
     + '|^<\\?[\\s\\S]*?\\?>' // processing instruction, e.g. <?php ?>
     + '|^<![a-zA-Z]+\\s[\\s\\S]*?>' // declaration, e.g. <!DOCTYPE html>
-    + '|^<!\\[CDATA\\[[\\s\\S]*?\\]\\]>', // CDATA section
-  link: /^!?\[(label)\]\(\s*(href)(?:\s+(title))?\s*\)/,
-  reflink: /^!?\[(label)\]\[(ref)\]/,
-  nolink: /^!?\[(ref)\](?:\[\])?/,
-  reflinkSearch: 'reflink|nolink(?!\\()',
-  emStrong: {
-    lDelim: /^(?:\*+(?:((?!\*)[punct])|[^\s*]))|^_+(?:((?!_)[punct])|([^\s_]))/,
-    //         (1) and (2) can only be a Right Delimiter. (3) and (4) can only be Left.  (5) and (6) can be either Left or Right.
-    //         | Skip orphan inside strong      | Consume to delim | (1) #***              | (2) a***#, a***                    | (3) #***a, ***a                  | (4) ***#                 | (5) #***#                         | (6) a***a
-    rDelimAst: /^[^_*]*?__[^_*]*?\*[^_*]*?(?=__)|[^*]+(?=[^*])|(?!\*)[punct](\*+)(?=[\s]|$)|[^punct\s](\*+)(?!\*)(?=[punct\s]|$)|(?!\*)[punct\s](\*+)(?=[^punct\s])|[\s](\*+)(?!\*)(?=[punct])|(?!\*)[punct](\*+)(?!\*)(?=[punct])|[^punct\s](\*+)(?=[^punct\s])/,
-    rDelimUnd: /^[^_*]*?\*\*[^_*]*?_[^_*]*?(?=\*\*)|[^_]+(?=[^_])|(?!_)[punct](_+)(?=[\s]|$)|[^punct\s](_+)(?!_)(?=[punct\s]|$)|(?!_)[punct\s](_+)(?=[^punct\s])|[\s](_+)(?!_)(?=[punct])|(?!_)[punct](_+)(?!_)(?=[punct])/ // ^- Not allowed for _
-  },
-  code: /^(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)/,
-  br: /^( {2,}|\\)\n(?!\s*$)/,
-  del: noopTest,
-  text: /^(`+|[^`])(?:(?= {2,}\n)|[\s\S]*?(?:(?=[\\<!\[`*_]|\b_|$)|[^ ](?= {2,}\n)))/,
-  punctuation: /^((?![*_])[\spunctuation])/
-};
-
-// list of unicode punctuation marks, plus any missing characters from CommonMark spec
-inline._punctuation = '\\p{P}$+<=>`^|~';
-inline.punctuation = edit(inline.punctuation, 'u').replace(/punctuation/g, inline._punctuation).getRegex();
-
-// sequences em should skip over [title](link), `code`, <html>
-inline.blockSkip = /\[[^[\]]*?\]\([^\(\)]*?\)|`[^`]*?`|<[^<>]*?>/g;
-inline.anyPunctuation = /\\[punct]/g;
-inline._escapes = /\\([punct])/g;
-
-inline._comment = edit(block._comment).replace('(?:-->|$)', '-->').getRegex();
-
-inline.emStrong.lDelim = edit(inline.emStrong.lDelim as Rule, 'u')
-  .replace(/punct/g, inline._punctuation)
+    + '|^<!\\[CDATA\\[[\\s\\S]*?\\]\\]>') // CDATA section
+  .replace('comment', _inlineComment)
+  .replace('attribute', /\s+[a-zA-Z:_][\w.:-]*(?:\s*=\s*"[^"]*"|\s*=\s*'[^']*'|\s*=\s*[^\s"'=<>`]+)?/)
   .getRegex();
 
-inline.emStrong.rDelimAst = edit(inline.emStrong.rDelimAst as Rule, 'gu')
-  .replace(/punct/g, inline._punctuation)
+const _inlineLabel = /(?:\[(?:\\[\s\S]|[^\[\]\\])*\]|\\[\s\S]|`+(?!`)[^`]*?`+(?!`)|``+(?=\])|[^\[\]\\`])*?/;
+
+const link = edit(/^!?\[(label)\]\(\s*(href)(?:(?:[ \t]+(?:\n[ \t]*)?|\n[ \t]*)(title))?\s*\)/)
+  .replace('label', _inlineLabel)
+  .replace('href', /<(?:\\.|[^\n<>\\])+>|[^ \t\n\x00-\x1f]*/)
+  .replace('title', /"(?:\\"?|[^"\\])*"|'(?:\\'?|[^'\\])*'|\((?:\\\)?|[^)\\])*\)/)
   .getRegex();
 
-inline.emStrong.rDelimUnd = edit(inline.emStrong.rDelimUnd as Rule, 'gu')
-  .replace(/punct/g, inline._punctuation)
+const reflink = edit(/^!?\[(label)\]\[(ref)\]/)
+  .replace('label', _inlineLabel)
+  .replace('ref', _blockLabel)
   .getRegex();
 
-inline.anyPunctuation = edit(inline.anyPunctuation as Rule, 'gu')
-  .replace(/punct/g, inline._punctuation)
+const nolink = edit(/^!?\[(ref)\](?:\[\])?/)
+  .replace('ref', _blockLabel)
   .getRegex();
 
-inline._escapes = edit(inline._escapes, 'gu')
-  .replace(/punct/g, inline._punctuation)
+const reflinkSearch = edit('reflink|nolink(?!\\()', 'g')
+  .replace('reflink', reflink)
+  .replace('nolink', nolink)
   .getRegex();
 
-inline._scheme = /[a-zA-Z][a-zA-Z0-9+.-]{1,31}/;
-inline._email = /[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+(@)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?![-_])/;
-inline.autolink = edit(inline.autolink)
-  .replace('scheme', inline._scheme)
-  .replace('email', inline._email)
-  .getRegex();
-
-inline._attribute = /\s+[a-zA-Z:_][\w.:-]*(?:\s*=\s*"[^"]*"|\s*=\s*'[^']*'|\s*=\s*[^\s"'=<>`]+)?/;
-
-inline.tag = edit(inline.tag)
-  .replace('comment', inline._comment)
-  .replace('attribute', inline._attribute)
-  .getRegex();
-
-inline._label = /(?:\[(?:\\.|[^\[\]\\])*\]|\\.|`[^`]*`|[^\[\]\\`])*?/;
-inline._href = /<(?:\\.|[^\n<>\\])+>|[^\s\x00-\x1f]*/;
-inline._title = /"(?:\\"?|[^"\\])*"|'(?:\\'?|[^'\\])*'|\((?:\\\)?|[^)\\])*\)/;
-
-inline.link = edit(inline.link)
-  .replace('label', inline._label)
-  .replace('href', inline._href)
-  .replace('title', inline._title)
-  .getRegex();
-
-inline.reflink = edit(inline.reflink)
-  .replace('label', inline._label)
-  .replace('ref', block._label)
-  .getRegex();
-
-inline.nolink = edit(inline.nolink)
-  .replace('ref', block._label)
-  .getRegex();
-
-inline.reflinkSearch = edit(inline.reflinkSearch, 'g')
-  .replace('reflink', inline.reflink)
-  .replace('nolink', inline.nolink)
-  .getRegex();
+const _caseInsensitiveProtocol = /[hH][tT][tT][pP][sS]?|[fF][tT][pP]/;
 
 /**
  * Normal Inline Grammar
  */
 
-inline.normal = { ...inline };
+const inlineNormal = {
+  _backpedal: noopTest, // only used for GFM url
+  anyPunctuation,
+  autolink,
+  blockSkip,
+  br,
+  code: inlineCode,
+  del: noopTest,
+  delLDelim: noopTest,
+  delRDelim: noopTest,
+  emStrongLDelim,
+  emStrongRDelimAst,
+  emStrongRDelimUnd,
+  escape,
+  link,
+  nolink,
+  punctuation,
+  reflink,
+  reflinkSearch,
+  tag,
+  text: inlineText,
+  url: noopTest,
+};
+
+type InlineKeys = keyof typeof inlineNormal;
 
 /**
  * Pedantic Inline Grammar
  */
 
-inline.pedantic = {
-  ...inline.normal,
-  strong: {
-    start: /^__|\*\*/,
-    middle: /^__(?=\S)([\s\S]*?\S)__(?!_)|^\*\*(?=\S)([\s\S]*?\S)\*\*(?!\*)/,
-    endAst: /\*\*(?!\*)/g,
-    endUnd: /__(?!_)/g
-  },
-  em: {
-    start: /^_|\*/,
-    middle: /^()\*(?=\S)([\s\S]*?\S)\*(?!\*)|^_(?=\S)([\s\S]*?\S)_(?!_)/,
-    endAst: /\*(?!\*)/g,
-    endUnd: /_(?!_)/g
-  },
+const inlinePedantic: Record<InlineKeys, RegExp> = {
+  ...inlineNormal,
   link: edit(/^!?\[(label)\]\((.*?)\)/)
-    .replace('label', inline._label)
+    .replace('label', _inlineLabel)
     .getRegex(),
   reflink: edit(/^!?\[(label)\]\s*\[([^\]]*)\]/)
-    .replace('label', inline._label)
-    .getRegex()
+    .replace('label', _inlineLabel)
+    .getRegex(),
 };
 
 /**
  * GFM Inline Grammar
  */
 
-inline.gfm = {
-  ...inline.normal,
-  escape: edit(inline.escape).replace('])', '~|])').getRegex(),
-  _extended_email: /[A-Za-z0-9._+-]+(@)[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]*[a-zA-Z0-9])+(?![-_])/,
-  url: /^((?:ftp|https?):\/\/|www\.)(?:[a-zA-Z0-9\-]+\.?)+[^\s<]*|^email/,
+const inlineGfm: Record<InlineKeys, RegExp> = {
+  ...inlineNormal,
+  emStrongRDelimAst: emStrongRDelimAstGfm,
+  emStrongLDelim: emStrongLDelimGfm,
+  delLDelim,
+  delRDelim,
+  url: edit(/^((?:protocol):\/\/|www\.)(?:[a-zA-Z0-9\-]+\.?)+[^\s<]*|^email/)
+    .replace('protocol', _caseInsensitiveProtocol)
+    .replace('email', /[A-Za-z0-9._+-]+(@)[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]*[a-zA-Z0-9])+(?![-_])/)
+    .getRegex(),
   _backpedal: /(?:[^?!.,:;*_'"~()&]+|\([^)]*\)|&(?![a-zA-Z0-9]+;$)|[?!.,:;*_'"~)]+(?!$))+/,
-  del: /^(~~?)(?=[^\s~])([\s\S]*?[^\s~])\1(?=[^~]|$)/,
-  text: /^([`~]+|[^`~])(?:(?= {2,}\n)|(?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)|[\s\S]*?(?:(?=[\\<!\[`*~_]|\b_|https?:\/\/|ftp:\/\/|www\.|$)|[^ ](?= {2,}\n)|[^a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-](?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)))/
+  del: /^(~~?)(?=[^\s~])((?:\\[\s\S]|[^\\])*?(?:\\[\s\S]|[^\s~\\]))\1(?=[^~]|$)/,
+  text: edit(/^([`~]+|[^`~])(?:(?= {2,}\n)|(?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)|[\s\S]*?(?:(?=[\\<!\[`*~_]|\b_|protocol:\/\/|www\.|$)|[^ ](?= {2,}\n)|[^a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-](?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)))/)
+    .replace('protocol', _caseInsensitiveProtocol)
+    .getRegex(),
 };
 
-inline.gfm.url = edit(inline.gfm.url as Rule, 'i')
-  .replace('email', inline.gfm._extended_email as RegExp)
-  .getRegex();
 /**
  * GFM + Line Breaks Inline Grammar
  */
 
-inline.breaks = {
-  ...inline.gfm,
-  br: edit(inline.br).replace('{2,}', '*').getRegex(),
-  text: edit(inline.gfm.text as Rule)
+const inlineBreaks: Record<InlineKeys, RegExp> = {
+  ...inlineGfm,
+  br: edit(br).replace('{2,}', '*').getRegex(),
+  text: edit(inlineGfm.text)
     .replace('\\b_', '\\b_| {2,}\\n')
     .replace(/\{2,\}/g, '*')
-    .getRegex()
+    .getRegex(),
 };
+
+/**
+ * exports
+ */
+
+export const block = {
+  normal: blockNormal,
+  gfm: blockGfm,
+  pedantic: blockPedantic,
+};
+
+export const inline = {
+  normal: inlineNormal,
+  gfm: inlineGfm,
+  breaks: inlineBreaks,
+  pedantic: inlinePedantic,
+};
+
+export interface Rules {
+  other: typeof other
+  block: Record<BlockKeys, RegExp>
+  inline: Record<InlineKeys, RegExp>
+}
