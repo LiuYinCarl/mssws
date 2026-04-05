@@ -33,6 +33,15 @@ MSSWS is a simple static web server written in Go that serves markdown files and
 
 # Restart server (kill and restart)
 ./run.sh restart
+
+# Run tests
+go test -v
+
+# Build Docker image
+docker build -t mssws .
+
+# Run with Docker
+docker run -d -p 8000:8000 -v $(pwd)/blog:/app/blog mssws
 ```
 
 ### Index Generation
@@ -56,7 +65,9 @@ go mod tidy
 ```
 mssws/
 ├── main.go                 # Main Go application
+├── main_test.go           # Unit tests for main application
 ├── config.toml            # Configuration file
+├── Dockerfile             # Docker configuration
 ├── run.sh                 # Build/run control script
 ├── genindex.sh           # Index generation script
 ├── genindex.py           # Python index/RSS generation

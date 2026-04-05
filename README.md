@@ -53,6 +53,17 @@ If you want to see more info about how to run the program, run `./run.sh help`
 
 如果想知道更多关于程序的信息，请执行命令 `./run.sh help`
 
+## Docker 使用
+
+使用Docker可以更方便地部署和运行MSSWS：
+
+```bash
+# 构建Docker镜像
+docker build -t mssws .
+
+# 运行容器
+docker run -d -p 8000:8000 -v $(pwd)/blog:/app/blog mssws
+```
 
 ## 示例|Example
 
@@ -221,4 +232,10 @@ use config.toml replace config.json
 use log package to manager output
 
 使用 log 库来管理输出输出
+
+2026/04/05
+
+improve code quality and performance: fix error handling, add template caching, add debounce to directory monitor, standardize code style, add unit tests, add graceful shutdown, add Docker support
+
+改进代码质量和性能：修复错误处理，添加模板缓存，为目录监控添加防抖，统一代码风格，添加单元测试，添加优雅关闭功能，添加Docker支持
 

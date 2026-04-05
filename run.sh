@@ -36,8 +36,14 @@ function f_run_program() {
         fi
     done
 
+    # Wait for graceful shutdown
+    sleep 2
+
     echo "start run ${exec_name} ..."
     nohup ./${exec_name} &>server.log &
+
+    # Wait a bit for the process to start
+    sleep 1
 
     f_get_pids
     for p in "${g_pids[@]}"; do
@@ -82,6 +88,8 @@ elif [ "$1" = "kill" ]; then
 	echo "kill ${exec_name} [ ${p} ]"
 	kill "${p}"
     done
+    # Wait for graceful shutdown
+    sleep 2
 
 elif [ "$1" = "compile" ]; then
     echo "compile ${exec_name} ..."

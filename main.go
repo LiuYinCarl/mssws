@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -11,11 +12,15 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
+	"syscall"
 	"text/template"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	toml "github.com/pelletier/go-toml/v2"
@@ -65,30 +70,43 @@ var (
 	styleTemplatePath   = "./tmpl/style.tmpl"
 	queryFile           = "query.data"
 
-	forbiddenFiles = make(map[string]bool)
+	// Forbidden files that should not be served
+	forbiddenFiles = []string{
+		"./directory_monitor.sh",
+		"./genindex.py",
+		"./main.go",
+		"./config.toml",
+		"./genindex.sh",
+		"./run.sh",
+		"./mssws_prog",
+	}
+
 	rootDir, _ = filepath.Abs("./")
+
+	// Template cache
+	templates = make(map[string]*template.Template)
 )
 
-func base_log(msg string) {
+func baseLog(msg string) {
 	if conf.DevMode == "debug" {
 		fmt.Println(msg)
 	}
 	log.Println(msg)
 }
 
-func info_log(format string, v ... any) {
+func infoLog(format string, v ... any) {
 	msg := "[INFO] " + fmt.Sprintf(format, v...)
-	base_log(msg)
+	baseLog(msg)
 }
 
-func warn_log(format string, v ...any) {
+func warnLog(format string, v ...any) {
 	msg := "[WARN] " + fmt.Sprintf(format, v...)
-	base_log(msg)
+	baseLog(msg)
 }
 
-func err_log(format string, v ...any) {
+func errLog(format string, v ...any) {
 	msg := "[ERROR] " + fmt.Sprintf(format, v...)
-	base_log(msg)
+	baseLog(msg)
 }
 
 // loadConfig loads and validates the TOML configuration
@@ -113,16 +131,9 @@ func loadConfig() error {
 		return fmt.Errorf("invalid Port: %d (must be 1-65535)", conf.Port)
 	}
 
-	// Initialize forbidden files map
-	forbiddenFiles["./directory_monitor.sh"] = true
-	forbiddenFiles["./genindex.py"] = true
-	forbiddenFiles["./main.go"] = true
-	forbiddenFiles["./config.toml"] = true
-	forbiddenFiles["./genindex.sh"] = true
-	forbiddenFiles["./run.sh"] = true
-	forbiddenFiles["./mssws_prog"] = true
+	// Add log file to forbidden files if specified
 	if conf.LogFile != "" {
-		forbiddenFiles[conf.LogFile] = true
+		forbiddenFiles = append(forbiddenFiles, conf.LogFile)
 	}
 
 	// Ensure BlogDir exists or can be created
@@ -130,7 +141,7 @@ func loadConfig() error {
 		if err := os.MkdirAll(conf.BlogDir, 0755); err != nil {
 			return fmt.Errorf("failed to create BlogDir %s: %w", conf.BlogDir, err)
 		}
-		info_log("created blog directory: %s", conf.BlogDir)
+		infoLog("created blog directory: %s", conf.BlogDir)
 	}
 
 	return nil
@@ -140,14 +151,18 @@ func loadConfig() error {
 // fsnotify 默认不会监测子目录
 func watchSubDir(watcher *fsnotify.Watcher, dir string) {
 	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			errLog("walk error: %v", err)
+			return err
+		}
 		if info.IsDir() {
-			path, err := filepath.Abs(path)
+			absPath, err := filepath.Abs(path)
 			if err != nil {
-				err_log("get abs path failed, err:%v", err)
+				errLog("get abs path failed, err:%v", err)
 				return err
 			}
-			if err := watcher.Add(path); err != nil {
-				err_log("watch path failed, path:%s, err:%v", path, err)
+			if err := watcher.Add(absPath); err != nil {
+				errLog("watch path failed, path:%s, err:%v", absPath, err)
 				return err
 			}
 		}
@@ -159,9 +174,15 @@ func watchSubDir(watcher *fsnotify.Watcher, dir string) {
 func dirMonitor() {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		err_log("NewWatcher failed, err:%v", err)
+		errLog("NewWatcher failed, err:%v", err)
+		return
 	}
 	defer watcher.Close()
+
+	// 防抖定时器
+	var debounceTimer *time.Timer
+	var debounceMutex sync.Mutex
+	debounceDuration := 500 * time.Millisecond
 
 	done := make(chan bool)
 	go func() {
@@ -173,16 +194,27 @@ func dirMonitor() {
 				if !ok {
 					return
 				}
-				info_log("run bash genindex.sh, event name:%s event op:%s", event.Name, event.Op)
-				cmd := exec.Command("bash", "./genindex.sh")
-				if err := cmd.Run(); err != nil {
-					err_log("run genindex.sh failed, err:%v", err)
+				infoLog("file event: %s %s", event.Name, event.Op)
+
+				// 防抖处理
+				debounceMutex.Lock()
+				if debounceTimer != nil {
+					debounceTimer.Stop()
 				}
+				debounceTimer = time.AfterFunc(debounceDuration, func() {
+					infoLog("run bash genindex.sh after debounce")
+					cmd := exec.Command("bash", "./genindex.sh")
+					if err := cmd.Run(); err != nil {
+						errLog("run genindex.sh failed, err:%v", err)
+					}
+				})
+				debounceMutex.Unlock()
+
 			case err, ok := <-watcher.Errors:
 				if !ok {
 					return
 				}
-				err_log("watcher err:%v", err)
+				errLog("watcher err:%v", err)
 			}
 		}
 	}()
@@ -225,7 +257,7 @@ func validatePath(requestPath string) (string, error) {
 	return filepath.Join(".", cleanPath), nil
 }
 
-func IsDir(path string) bool {
+func isDir(path string) bool {
 	s, err := os.Stat(path)
 	if err != nil {
 		return false
@@ -233,12 +265,12 @@ func IsDir(path string) bool {
 	return s.IsDir()
 }
 
-func IsFile(path string) bool {
-	return !IsDir(path)
+func isFile(path string) bool {
+	return !isDir(path)
 }
 
 // strings.Split 函数切割数组后可能会出现空字符串,违反直觉，这个函数用来去掉空字符串
-func Split(s string, sep string) []string {
+func split(s string, sep string) []string {
 	tmp := strings.Split(s, sep)
 	res := make([]string, 0)
 	for _, k := range tmp {
@@ -249,7 +281,7 @@ func Split(s string, sep string) []string {
 	return res
 }
 
-func GetContentType(suffix string) string {
+func getContentType(suffix string) string {
 	switch suffix {
 	case "html":
 		return "text/html;charset=utf-8"
@@ -307,26 +339,26 @@ func validateQueryPath(filePath string) bool {
 	return true
 }
 
-func query_single_file(filePath string, queryStr string) bool {
+func querySingleFile(filePath string, queryStr string) bool {
 	if filePath == "" {
-		err_log("query filepath is empty, filepath:%s, query_str:%s", filePath, queryStr)
+		errLog("query filepath is empty, filepath:%s, query_str:%s", filePath, queryStr)
 		return false
 	}
 
 	// Validate the file path first
 	if !validateQueryPath(filePath) {
-		err_log("query path validation failed: %s", filePath)
+		errLog("query path validation failed: %s", filePath)
 		return false
 	}
 
-	if ok := IsFile(filePath); !ok {
-		err_log("query path is not a file, filepath:%s, query_str:%s", filePath, queryStr)
+	if ok := isFile(filePath); !ok {
+		errLog("query path is not a file, filepath:%s, query_str:%s", filePath, queryStr)
 		return false
 	}
 
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		err_log("failed to read file for query: %s, error: %v", filePath, err)
+		errLog("failed to read file for query: %s, error: %v", filePath, err)
 		return false
 	}
 
@@ -364,7 +396,7 @@ func sanitizeSearchString(input string) string {
 
 func query(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		err_log("failed to parse form: %v", err)
+		errLog("failed to parse form: %v", err)
 		w.Write([]byte("Invalid form data."))
 		return
 	}
@@ -388,11 +420,11 @@ func query(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	info_log("search query: %s", query_str)
+	infoLog("search query: %s", query_str)
 
 	f_query, err := os.Open(queryFile)
 	if err != nil {
-		err_log("query open file failed, query_str:%s, queryFile:%s", query_str, queryFile)
+		errLog("query open file failed, query_str:%s, queryFile:%s", query_str, queryFile)
 		w.Write([]byte("open query file error."))
 		return
 	}
@@ -409,7 +441,7 @@ func query(w http.ResponseWriter, r *http.Request) {
 
 		filepath := string(line)
 
-		if ok := query_single_file(filepath, query_str); ok {
+		if ok := querySingleFile(filepath, query_str); ok {
 			str := fmt.Sprintf("<a href=\"%s\">%s</a></br>", line, line)
 			return_lines = append(return_lines, str)
 		}
@@ -420,10 +452,9 @@ func query(w http.ResponseWriter, r *http.Request) {
 		buffer.WriteString(s)
 	}
 
-	temp, err := template.ParseFiles(queryTemplatePath, styleTemplatePath)
+	temp, err := getTemplate("query")
 	if err != nil {
-		err_log("load query template failed, queryTemplatePath:%s, styleTemplatePath:%s",
-			queryTemplatePath, styleTemplatePath)
+		errLog("load query template failed: %v", err)
 		w.Write([]byte("load query template file failed."))
 		return
 	}
@@ -441,18 +472,17 @@ func query(w http.ResponseWriter, r *http.Request) {
 func indexPage(w http.ResponseWriter, _ *http.Request) {
 	content, err := os.ReadFile("index.data")
 	if err != nil {
-		err_log("open index.data failed")
+		errLog("open index.data failed")
 		w.Write([]byte("Sorry, Index Page Not Exist."))
 		return
 	}
 
-	content_type := GetContentType("html")
+	content_type := getContentType("html")
 	w.Header().Set("Content-Type", content_type)
 
-	temp, err := template.ParseFiles(indexTemplatePath, styleTemplatePath)
+	temp, err := getTemplate("index")
 	if err != nil {
-		err_log("load index template failed, queryTemplatePath:%s, styleTemplatePath:%s",
-			queryTemplatePath, styleTemplatePath)
+		errLog("load index template failed: %v", err)
 		w.Write([]byte("load index template file failed."))
 		return
 	}
@@ -471,7 +501,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 	rawPath := r.URL.Path
 	unescapedPath, err := url.PathUnescape(rawPath)
 	if err != nil {
-		err_log("url decode failed, path:%s, err:%v", rawPath, err)
+		errLog("url decode failed, path:%s, err:%v", rawPath, err)
 		w.Write([]byte("url decode error."))
 		return
 	}
@@ -485,30 +515,37 @@ func index(w http.ResponseWriter, r *http.Request) {
 	// Validate and sanitize the file path
 	filePath, err := validatePath(unescapedPath)
 	if err != nil {
-		err_log("path validation failed: %v", err)
+		errLog("path validation failed: %v", err)
 		w.Write([]byte("Invalid path requested."))
 		return
 	}
 
-	info_log("visit file:%s", filePath)
+	infoLog("visit file:%s", filePath)
 
 	// Check forbidden files
-	if _, ok := forbiddenFiles[filePath]; ok {
+	isForbidden := false
+	for _, forbidden := range forbiddenFiles {
+		if filePath == forbidden {
+			isForbidden = true
+			break
+		}
+	}
+	if isForbidden {
 		w.Write([]byte("Access to this file is forbidden."))
 		return
 	}
 
 	// Verify the file exists and is a regular file
-	if ok := IsFile(filePath); !ok {
+	if ok := isFile(filePath); !ok {
 		w.Write([]byte("[404] File not found."))
 		return
 	}
 
 	suffix := ""
-	if split_list := Split(filePath, "."); len(split_list) > 1 {
+	if split_list := split(filePath, "."); len(split_list) > 1 {
 		suffix = split_list[len(split_list)-1]
 	}
-	content_type := GetContentType(suffix)
+	content_type := getContentType(suffix)
 	w.Header().Set("Content-Type", content_type)
 
 	if conf.CacheTime > 0 {
@@ -519,15 +556,19 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 	// markdown file
 	if suffix == "md" {
-		temp, err := template.ParseFiles(articleTemplatePath, styleTemplatePath)
+		temp, err := getTemplate("article")
 		if err != nil {
-			err_log("load article template failed, queryTemplatePath:%s, styleTemplatePath:%s",
-				queryTemplatePath, styleTemplatePath)
+			errLog("load article template failed: %v", err)
 			w.Write([]byte("load article template file failed."))
 			return
 		}
 
 		content, err := os.ReadFile(filePath)
+		if err != nil {
+			errLog("read markdown file failed, path:%s, err:%v", filePath, err)
+			w.Write([]byte("read file error."))
+			return
+		}
 		articleName := path.Base(filePath)
 
 		article := Article{
@@ -542,7 +583,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 	} else {
 		content, err := os.ReadFile(filePath)
 		if err != nil {
-			warn_log("trying to visit non-existent file:%s", filePath)
+			warnLog("trying to visit non-existent file:%s", filePath)
 			w.Write([]byte("404 file not exist."))
 			return
 		}
@@ -550,22 +591,50 @@ func index(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// getTemplate loads and caches templates
+func getTemplate(name string) (*template.Template, error) {
+	if t, ok := templates[name]; ok {
+		return t, nil
+	}
+
+	var t *template.Template
+	var err error
+
+	switch name {
+	case "index":
+		t, err = template.ParseFiles(indexTemplatePath, styleTemplatePath)
+	case "article":
+		t, err = template.ParseFiles(articleTemplatePath, styleTemplatePath)
+	case "query":
+		t, err = template.ParseFiles(queryTemplatePath, styleTemplatePath)
+	default:
+		return nil, fmt.Errorf("unknown template: %s", name)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	templates[name] = t
+	return t, nil
+}
+
 func main() {
 	if err := loadConfig(); err != nil {
-		err_log("Failed to load configuration: %v", err)
+		errLog("Failed to load configuration: %v", err)
 		os.Exit(1)
 	}
-	info_log("mssws starting...")
+	infoLog("mssws starting...")
 
 	// init log
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
 	log_file, err := os.OpenFile(conf.LogFile, os.O_WRONLY | os.O_APPEND | os.O_CREATE, 0644)
 	if err != nil {
-		err_log("open log file failed, file=%s, err=%v", conf.LogFile, err)
+		errLog("open log file failed, file=%s, err=%v", conf.LogFile, err)
 		os.Exit(1)
 	}
 	log.SetOutput(log_file)
-	info_log("create logger success")
+	infoLog("create logger success")
 
 	if conf.OpenDirMonitor == true {
 		go dirMonitor()
@@ -575,11 +644,40 @@ func main() {
 	http.HandleFunc("/query", query)
 
 	ip_port := conf.Ip + ":" + strconv.Itoa(conf.Port)
-	info_log(fmt.Sprintf("mssws start listen and serve in %s...", ip_port))
+	infoLog(fmt.Sprintf("mssws start listen and serve in %s...", ip_port))
 
-	err = http.ListenAndServe(ip_port, nil)
-	if err != nil {
-		err_log("listen and serve failed, err=%v", err)
+	// 创建HTTP服务器
+	server := &http.Server{
+		Addr:         ip_port,
+		Handler:      nil,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	// 优雅关闭
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-quit
+		infoLog("shutting down server...")
+
+		// 创建5秒超时的上下文
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// 关闭HTTP服务器
+		if err := server.Shutdown(ctx); err != nil {
+			errLog("server shutdown failed: %v", err)
+		}
+
+		infoLog("server stopped")
+	}()
+
+	// 启动服务器
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		errLog("listen and serve failed, err=%v", err)
 		os.Exit(1)
 	}
 }
