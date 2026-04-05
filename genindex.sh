@@ -9,17 +9,18 @@ echo "<hr>" >> temp.file
 tree ./blog -i -f -N -P "*.pdf" -I "*.assets" --prune --ignore-case | grep "pdf$\|md$" >> temp.file
 
 
-if hash python3 2>/dev/null; then
-    python3 genindex.py
-else
-    python genindex.py
+# Require python3 and run the index generator
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "Error: python3 not found. Please install Python 3."
+    exit 1
 fi
 
-if [ $? -ne 0 ]; then
-    echo "run python failed"
-else
-    echo "run python succ"
+if ! python3 genindex.py; then
+    echo "Error: python3 genindex.py failed."
+    echo "You may need to install the toml module: pip3 install toml"
+    exit 1
 fi
+echo "run python succ"
 
 rm temp.file
 

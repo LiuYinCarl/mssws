@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -57,16 +58,15 @@ type Index struct {
 
 var (
 	conf config
-	is_head				= true
-	confPath			= "./config.toml"
-	indexTemplatePath	= "./tmpl/index.tmpl"
+	confPath            = "./config.toml"
+	indexTemplatePath   = "./tmpl/index.tmpl"
 	articleTemplatePath = "./tmpl/article.tmpl"
-	queryTemplatePath	= "./tmpl/query.tmpl"
+	queryTemplatePath   = "./tmpl/query.tmpl"
 	styleTemplatePath   = "./tmpl/style.tmpl"
-	query_file			= "query.data"
+	queryFile           = "query.data"
 
-	forbidden_files = make(map[string]bool)
-	root_dir, _ = filepath.Abs("./")
+	forbiddenFiles = make(map[string]bool)
+	rootDir, _ = filepath.Abs("./")
 )
 
 func base_log(msg string) {
@@ -91,31 +91,49 @@ func err_log(format string, v ...any) {
 	base_log(msg)
 }
 
-// 加载 toml 配置
-func loadConfig() bool {
+// loadConfig loads and validates the TOML configuration
+func loadConfig() error {
 	data, err := os.ReadFile(confPath)
 	if err != nil {
-		err_log("read config file failed. file path is %s", confPath)
-		return false
+		return fmt.Errorf("read config file failed: %w", err)
 	}
 
-	err = toml.Unmarshal(data, &conf)
-	if err != nil {
-		err_log("config.toml's content is error, %s", err)
-		return false
+	if err := toml.Unmarshal(data, &conf); err != nil {
+		return fmt.Errorf("parse config failed: %w", err)
 	}
 
-	// forbidden visit files
-	forbidden_files["./directory_monitor.sh"] = true
-	forbidden_files["./genindex.py"]          = true
-	forbidden_files["./main.go"]              = true
-	forbidden_files["./config.toml"]          = true
-	forbidden_files["./genindex.sh"]          = true
-	forbidden_files["./run.sh"]               = true
-	forbidden_files["./mssws_prog"]           = true
-	forbidden_files[conf.LogFile]             = true
+	// Validate required configuration fields
+	if conf.BlogDir == "" {
+		return errors.New("BlogDir is required in config")
+	}
+	if conf.LogFile == "" {
+		return errors.New("LogFile is required in config")
+	}
+	if conf.Port <= 0 || conf.Port > 65535 {
+		return fmt.Errorf("invalid Port: %d (must be 1-65535)", conf.Port)
+	}
 
-	return true
+	// Initialize forbidden files map
+	forbiddenFiles["./directory_monitor.sh"] = true
+	forbiddenFiles["./genindex.py"] = true
+	forbiddenFiles["./main.go"] = true
+	forbiddenFiles["./config.toml"] = true
+	forbiddenFiles["./genindex.sh"] = true
+	forbiddenFiles["./run.sh"] = true
+	forbiddenFiles["./mssws_prog"] = true
+	if conf.LogFile != "" {
+		forbiddenFiles[conf.LogFile] = true
+	}
+
+	// Ensure BlogDir exists or can be created
+	if _, err := os.Stat(conf.BlogDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(conf.BlogDir, 0755); err != nil {
+			return fmt.Errorf("failed to create BlogDir %s: %w", conf.BlogDir, err)
+		}
+		info_log("created blog directory: %s", conf.BlogDir)
+	}
+
+	return nil
 }
 
 // 将目录及其子目录加入 fsnotify Watch
@@ -173,6 +191,40 @@ func dirMonitor() {
 	<-done
 }
 
+// validatePath validates and sanitizes a requested file path
+func validatePath(requestPath string) (string, error) {
+	if requestPath == "" || requestPath == "/" {
+		return ".", nil
+	}
+
+	// Remove any leading slash and clean the path
+	cleanPath := strings.TrimPrefix(requestPath, "/")
+	if cleanPath == "" {
+		return ".", nil
+	}
+
+	// Use filepath.Clean to remove any ".." or "." components
+	cleanPath = filepath.Clean(cleanPath)
+
+	// Ensure the path is within the root directory
+	absPath, err := filepath.Abs(filepath.Join(".", cleanPath))
+	if err != nil {
+		return "", fmt.Errorf("invalid path: %w", err)
+	}
+
+	root, _ := filepath.Abs(".")
+	if !strings.HasPrefix(absPath, root) {
+		return "", errors.New("path traversal attempt detected")
+	}
+
+	// Check for forbidden directories (e.g., .git)
+	if strings.Contains(absPath, "/.git/") || strings.HasSuffix(absPath, "/.git") {
+		return "", errors.New("access to git directory forbidden")
+	}
+
+	return filepath.Join(".", cleanPath), nil
+}
+
 func IsDir(path string) bool {
 	s, err := os.Stat(path)
 	if err != nil {
@@ -224,43 +276,123 @@ func GetContentType(suffix string) string {
 	}
 }
 
-func query_single_file(filepath string, query_str string) bool {
-	if filepath == "" {
-		err_log("query filepath is empty, filepath:%s, quert_str:%s", filepath, query_str)
+// validateQueryPath validates that a file path is safe for query operations
+func validateQueryPath(filePath string) bool {
+	if filePath == "" {
 		return false
 	}
 
-	if ok := IsFile(filepath); !ok {
-		err_log("query path is not file, filepath:%s, query_str:%s", filepath, query_str)
-		return false
-	}
-
-	content, err := os.ReadFile(filepath)
+	// Ensure the path is within the blog directory
+	absPath, err := filepath.Abs(filePath)
 	if err != nil {
 		return false
 	}
 
-	return strings.Contains(string(content), query_str)
+	root, _ := filepath.Abs(".")
+	if !strings.HasPrefix(absPath, root) {
+		return false
+	}
+
+	// Check for path traversal attempts
+	cleanPath := filepath.Clean(filePath)
+	if cleanPath != filePath && !strings.HasPrefix(cleanPath, "./") {
+		return false
+	}
+
+	// Ensure it's a markdown file
+	if !strings.HasSuffix(strings.ToLower(filePath), ".md") {
+		return false
+	}
+
+	return true
+}
+
+func query_single_file(filePath string, queryStr string) bool {
+	if filePath == "" {
+		err_log("query filepath is empty, filepath:%s, query_str:%s", filePath, queryStr)
+		return false
+	}
+
+	// Validate the file path first
+	if !validateQueryPath(filePath) {
+		err_log("query path validation failed: %s", filePath)
+		return false
+	}
+
+	if ok := IsFile(filePath); !ok {
+		err_log("query path is not a file, filepath:%s, query_str:%s", filePath, queryStr)
+		return false
+	}
+
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		err_log("failed to read file for query: %s, error: %v", filePath, err)
+		return false
+	}
+
+	// Simple validation: query string should not be empty or too long
+	if queryStr == "" || len(queryStr) > 1000 {
+		return false
+	}
+
+	return strings.Contains(string(content), queryStr)
+}
+
+// sanitizeSearchString removes potentially dangerous characters from search query
+func sanitizeSearchString(input string) string {
+	// Remove null bytes, control characters, and excessive whitespace
+	input = strings.TrimSpace(input)
+
+	// Limit length to prevent abuse
+	if len(input) > 1000 {
+		input = input[:1000]
+	}
+
+	// Remove potentially dangerous patterns (basic protection)
+	dangerousPatterns := []string{
+		"../", "..\\", "/etc/", "/proc/", "/dev/",
+		";", "|", "&", "$", "`", "\"", "'",
+		"<script>", "</script>", "javascript:", "onload=",
+	}
+
+	for _, pattern := range dangerousPatterns {
+		input = strings.ReplaceAll(input, pattern, "")
+	}
+
+	return input
 }
 
 func query(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	info_log("query string is:%s", r.Form["search"])
-	if len(r.Form["search"]) == 0 {
-		w.Write([]byte("query string is empty."))
+	if err := r.ParseForm(); err != nil {
+		err_log("failed to parse form: %v", err)
+		w.Write([]byte("Invalid form data."))
 		return
 	}
 
-	query_str := r.Form["search"][0]
+	searchValues := r.Form["search"]
+	if len(searchValues) == 0 {
+		w.Write([]byte("Search query is required."))
+		return
+	}
+
+	query_str := searchValues[0]
 	if query_str == "" {
-		err_log("query string is empty")
-		w.Write([]byte("query string is empty."))
+		w.Write([]byte("Search query cannot be empty."))
 		return
 	}
 
-	f_query, err := os.Open(query_file)
+	// Sanitize the search query
+	query_str = sanitizeSearchString(query_str)
+	if query_str == "" {
+		w.Write([]byte("Invalid search query."))
+		return
+	}
+
+	info_log("search query: %s", query_str)
+
+	f_query, err := os.Open(queryFile)
 	if err != nil {
-		err_log("query open file failed, query_str:%s, query_file:%s", query_str, query_file)
+		err_log("query open file failed, query_str:%s, queryFile:%s", query_str, queryFile)
 		w.Write([]byte("open query file error."))
 		return
 	}
@@ -290,7 +422,7 @@ func query(w http.ResponseWriter, r *http.Request) {
 
 	temp, err := template.ParseFiles(queryTemplatePath, styleTemplatePath)
 	if err != nil {
-		err_log("load query template failed, quertTemplatePath:%s, stypeTemplatePath:%s",
+		err_log("load query template failed, queryTemplatePath:%s, styleTemplatePath:%s",
 			queryTemplatePath, styleTemplatePath)
 		w.Write([]byte("load query template file failed."))
 		return
@@ -319,7 +451,7 @@ func indexPage(w http.ResponseWriter, _ *http.Request) {
 
 	temp, err := template.ParseFiles(indexTemplatePath, styleTemplatePath)
 	if err != nil {
-		err_log("load index template failed, quertTemplatePath:%s, stypeTemplatePath:%s",
+		err_log("load index template failed, queryTemplatePath:%s, styleTemplatePath:%s",
 			queryTemplatePath, styleTemplatePath)
 		w.Write([]byte("load index template file failed."))
 		return
@@ -336,43 +468,39 @@ func indexPage(w http.ResponseWriter, _ *http.Request) {
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
-	url, err := url.PathUnescape(r.URL.Path)
+	rawPath := r.URL.Path
+	unescapedPath, err := url.PathUnescape(rawPath)
 	if err != nil {
-		err_log("url decode failed, path:%s, err:%v", r.URL.Path, err)
+		err_log("url decode failed, path:%s, err:%v", rawPath, err)
 		w.Write([]byte("url decode error."))
 		return
 	}
 
-	if url == "/" || url == "" || strings.ToLower(url) == "/index.html" {
+	// Handle index page
+	if unescapedPath == "/" || unescapedPath == "" || strings.ToLower(unescapedPath) == "/index.html" {
 		indexPage(w, r)
 		return
 	}
 
-	url = strings.TrimSpace(url)
-	filePath := fmt.Sprintf(".%s", url)
+	// Validate and sanitize the file path
+	filePath, err := validatePath(unescapedPath)
+	if err != nil {
+		err_log("path validation failed: %v", err)
+		w.Write([]byte("Invalid path requested."))
+		return
+	}
 
 	info_log("visit file:%s", filePath)
 
-	if _, ok := forbidden_files[filePath]; ok {
-		w.Write([]byte("try to visit forbieedn file."))
-		return
-	}
-	real_path, err := filepath.Abs(filePath)
-	if err != nil {
-		w.Write([]byte("invalid link."))
-		return
-	}
-	if !strings.HasPrefix(real_path, root_dir) {
-		w.Write([]byte("try visit invalid directory."))
-		return
-	}
-	if strings.HasPrefix(real_path, root_dir+"/.git") {
-		w.Write([]byte("try to visit forbidden directories."))
+	// Check forbidden files
+	if _, ok := forbiddenFiles[filePath]; ok {
+		w.Write([]byte("Access to this file is forbidden."))
 		return
 	}
 
+	// Verify the file exists and is a regular file
 	if ok := IsFile(filePath); !ok {
-		w.Write([]byte("[404] file not exist."))
+		w.Write([]byte("[404] File not found."))
 		return
 	}
 
@@ -393,7 +521,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 	if suffix == "md" {
 		temp, err := template.ParseFiles(articleTemplatePath, styleTemplatePath)
 		if err != nil {
-			err_log("load article template failed, quertTemplatePath:%s, stypeTemplatePath:%s",
+			err_log("load article template failed, queryTemplatePath:%s, styleTemplatePath:%s",
 				queryTemplatePath, styleTemplatePath)
 			w.Write([]byte("load article template file failed."))
 			return
@@ -414,7 +542,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 	} else {
 		content, err := os.ReadFile(filePath)
 		if err != nil {
-			warn_log("try to visit unexist file:%s", filePath)
+			warn_log("trying to visit non-existent file:%s", filePath)
 			w.Write([]byte("404 file not exist."))
 			return
 		}
@@ -423,7 +551,10 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	loadConfig()
+	if err := loadConfig(); err != nil {
+		err_log("Failed to load configuration: %v", err)
+		os.Exit(1)
+	}
 	info_log("mssws starting...")
 
 	// init log

@@ -1,14 +1,15 @@
 #!/bin/bash
+set -euo pipefail
 
 exec_name="mssws_prog"
 go_src="main.go"
 genindex_script="genindex.sh"
 
 # save result of get_pids
-g_pids=()
+declare -a g_pids
 
 function f_get_pids() {
-    g_pids=$(pgrep "${exec_name}")
+    mapfile -t g_pids < <(pgrep "${exec_name}" || true)
     return 0
 }
 
@@ -46,7 +47,7 @@ function f_run_program() {
         fi
     done
     echo "run ${exec_name} failed ..."
-    exit -1
+    exit 1
 }
 
 

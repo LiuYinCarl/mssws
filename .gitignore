@@ -5,3 +5,4 @@ main
 /libevent-book
 query.data
 temp.file
+__pycache__/
