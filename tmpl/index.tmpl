@@ -1,29 +1,34 @@
 <!DOCTYPE html>
-{{ template "style.tmpl" }}
-
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ .SiteTitle }}</title>
   <link rel="shortcut icon" href="favicon.ico" />
+  {{ template "style.tmpl" }}
 </head>
-
 <body>
-  <div style="float:left;">
-    <div>{{ range .SiteLinks }}<a href="{{ .Url }}">{{ .Title }}</a>&nbsp &nbsp{{ end }}</div>
-  </div>
-  <div style="float:right; width:40%;">
-    <form action="./query" method="POST">
-      <div>
-        <input name="search" id="search">
-        <button>Search</button>
-      </div>
-    </form>
-  </div>
-  <br>
-  <br>
-  <hr>
-  {{ .Content }}
-  {{ .FootPrint }}
-</body>
+  <header class="site-header">
+    <div class="header-row">
+      <nav class="site-nav">
+        <a class="brand" href="/">{{ .SiteTitle }}</a>
+        {{ range .SiteLinks }}
+        <a href="{{ .Url }}">{{ .Title }}</a>
+        {{ end }}
+      </nav>
+      <form class="search-form" action="./query" method="POST">
+        <input name="search" id="search" placeholder="搜索文章..." aria-label="搜索">
+        <button>搜索</button>
+      </form>
+    </div>
+  </header>
 
+  <main>
+    <div class="card">
+      {{ .Content }}
+    </div>
+  </main>
+
+  <footer class="site-footer">{{ .FootPrint }}</footer>
+</body>
 </html>

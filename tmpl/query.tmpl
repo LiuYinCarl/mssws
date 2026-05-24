@@ -1,32 +1,30 @@
 <!DOCTYPE html>
-{{ template "style.tmpl" }}
-
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>Query Result</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>搜索结果</title>
+  {{ template "style.tmpl" }}
 </head>
-
 <body>
-  <div style="float:left">
-    <a href= {{ .HomePageLink }} > {{ .HomePageTitle }} </a>
-  </div>
-  <div style="float:right; width:%40;">
-    <form action="./query" method="POST">
-      <div>
-        <input name="search" id="search">
-        <button>Research</button>
-      </div>
-    </form>
-  </div>
-  <br>
-  <br>
-  <hr>
+  <header class="site-header">
+    <div class="header-row">
+      <nav class="site-nav">
+        <a href="{{ .HomePageLink }}">← {{ .HomePageTitle }}</a>
+      </nav>
+      <form class="search-form" action="./query" method="POST">
+        <input name="search" id="search" placeholder="搜索文章..." aria-label="搜索">
+        <button>搜索</button>
+      </form>
+    </div>
+  </header>
 
-  {{ .Content }}
+  <main>
+    <div class="card">
+      {{ .Content }}
+    </div>
+  </main>
 
-  <hr>
-  {{ .FootPrint }}
-
+  <footer class="site-footer">{{ .FootPrint }}</footer>
 </body>
-
 </html>

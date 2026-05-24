@@ -1,36 +1,26 @@
 <!DOCTYPE html>
-{{ template "style.tmpl" }}
-
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ .SiteTitle }}</title>
+  {{ template "style.tmpl" }}
+  <script>window.texme = { style: 'none', markdownURL: '/lib/marked/marked.min.js', MathJaxURL: '/lib/mathjax/es5/tex-mml-chtml.js' }</script>
+  <script src="/lib/texme/texme.min.js"></script>
 </head>
-
 <body>
-  <textarea>
-    <div style="float:left;">
-      <a href= {{ .HomePageLink }} > {{ .HomePageTitle }} </a>
+  <header class="site-header">
+    <div class="header-row">
+      <nav class="site-nav">
+        <a href="{{ .HomePageLink }}">← {{ .HomePageTitle }}</a>
+      </nav>
     </div>
-    <div style="float:right;width:40%;">
-      <form action="/query" method="POST">
-        <div>
-          <input name="search" id="search">
-          <button>Search</button>
-        </div>
-      </form>
-    </div>
-    <br>
-    <br>
-    <hr>
+  </header>
 
+  <textarea style="display:none">
   \begin{md}
   {{ .Content }}
   \end{md}
-
-  <p>&nbsp;</p>
-  <a href= {{ .HomePageLink }} > {{ .HomePageTitle }} </a>
   </textarea>
-    {{ .FootPrint }}
 </body>
-
 </html>

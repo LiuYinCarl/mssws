@@ -266,7 +266,11 @@ func isDir(path string) bool {
 }
 
 func isFile(path string) bool {
-	return !isDir(path)
+	s, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return !s.IsDir()
 }
 
 // strings.Split 函数切割数组后可能会出现空字符串,违反直觉，这个函数用来去掉空字符串
@@ -314,24 +318,17 @@ func validateQueryPath(filePath string) bool {
 		return false
 	}
 
-	// Ensure the path is within the blog directory
+	// Ensure the resolved absolute path is within the project root
 	absPath, err := filepath.Abs(filePath)
 	if err != nil {
 		return false
 	}
-
 	root, _ := filepath.Abs(".")
 	if !strings.HasPrefix(absPath, root) {
 		return false
 	}
 
-	// Check for path traversal attempts
-	cleanPath := filepath.Clean(filePath)
-	if cleanPath != filePath && !strings.HasPrefix(cleanPath, "./") {
-		return false
-	}
-
-	// Ensure it's a markdown file
+	// Only search markdown files
 	if !strings.HasSuffix(strings.ToLower(filePath), ".md") {
 		return false
 	}
