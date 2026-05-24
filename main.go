@@ -258,7 +258,16 @@ func validatePath(requestPath string) (string, error) {
 }
 
 func isDir(path string) bool {
-	s, err := os.Stat(filepath.Clean(path))
+	cleanPath := filepath.Clean(path)
+	absPath, err := filepath.Abs(cleanPath)
+	if err != nil {
+		return false
+	}
+	root, _ := filepath.Abs(".")
+	if !strings.HasPrefix(absPath, root) {
+		return false
+	}
+	s, err := os.Stat(absPath)
 	if err != nil {
 		return false
 	}
@@ -266,7 +275,16 @@ func isDir(path string) bool {
 }
 
 func isFile(path string) bool {
-	s, err := os.Stat(filepath.Clean(path))
+	cleanPath := filepath.Clean(path)
+	absPath, err := filepath.Abs(cleanPath)
+	if err != nil {
+		return false
+	}
+	root, _ := filepath.Abs(".")
+	if !strings.HasPrefix(absPath, root) {
+		return false
+	}
+	s, err := os.Stat(absPath)
 	if err != nil {
 		return false
 	}

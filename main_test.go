@@ -198,7 +198,11 @@ func TestIsDir(t *testing.T) {
 	if isDir(filepath.Join("nonexistent_dir_xyz_12345")) {
 		t.Error(`isDir for nonexistent path should be false`)
 	}
-	tmpDir := t.TempDir()
+	tmpDir, err := os.MkdirTemp(".", "testdata_isdir_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
 	if !isDir(tmpDir) {
 		t.Error(`isDir for temp dir should be true`)
 	}
