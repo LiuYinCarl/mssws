@@ -258,7 +258,7 @@ func validatePath(requestPath string) (string, error) {
 }
 
 func isDir(path string) bool {
-	s, err := os.Stat(path)
+	s, err := os.Stat(filepath.Clean(path))
 	if err != nil {
 		return false
 	}
@@ -266,7 +266,7 @@ func isDir(path string) bool {
 }
 
 func isFile(path string) bool {
-	s, err := os.Stat(path)
+	s, err := os.Stat(filepath.Clean(path))
 	if err != nil {
 		return false
 	}
@@ -353,7 +353,7 @@ func querySingleFile(filePath string, queryStr string) bool {
 		return false
 	}
 
-	content, err := os.ReadFile(filePath)
+	content, err := os.ReadFile(filepath.Clean(filePath))
 	if err != nil {
 		errLog("failed to read file for query: %s, error: %v", filePath, err)
 		return false
